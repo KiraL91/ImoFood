@@ -1,0 +1,47 @@
+import { symptomLogSchema, type SymptomLog } from "@/lib/types/symptom-log";
+
+// Backend later: replace with GET /symptom-logs and POST /symptom-logs.
+export const symptomLogs: SymptomLog[] = symptomLogSchema.array().parse([
+  {
+    id: "symptom-log-001",
+    loggedAt: "2026-06-10T11:30:00.000Z",
+    bloating: 2,
+    pain: 1,
+    gas: 2,
+    transit: 5,
+    energy: 7,
+    sleep: 6,
+    notes: "Manana estable tras desayuno simple.",
+    relatedMealLogId: "meal-log-001",
+    createdAt: "2026-06-10T11:35:00.000Z",
+    updatedAt: "2026-06-10T11:35:00.000Z",
+  },
+  {
+    id: "symptom-log-002",
+    loggedAt: "2026-06-09T18:15:00.000Z",
+    bloating: 3,
+    pain: 2,
+    gas: 3,
+    transit: 5,
+    energy: 6,
+    sleep: 7,
+    notes: "Sin empeoramiento claro despues del bowl.",
+    relatedMealLogId: "meal-log-002",
+    createdAt: "2026-06-09T18:25:00.000Z",
+    updatedAt: "2026-06-09T18:25:00.000Z",
+  },
+  {
+    id: "symptom-log-003",
+    loggedAt: "2026-06-08T23:00:00.000Z",
+    bloating: 5,
+    pain: 3,
+    gas: 5,
+    transit: 4,
+    energy: 5,
+    sleep: 5,
+    notes: "Ligera hinchazon tras prueba de calabacin.",
+    relatedMealLogId: "meal-log-003",
+    createdAt: "2026-06-08T23:05:00.000Z",
+    updatedAt: "2026-06-08T23:05:00.000Z",
+  },
+]);
