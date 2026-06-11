@@ -1,6 +1,6 @@
 # IMO Meals
 
-PWA-ready frontend para gestionar alimentos, recetas e ideas de comida relacionadas con IMO/SIBO. El proyecto esta preparado para backend e IA, pero en esta fase solo usa datos mock locales.
+PWA-ready frontend para gestionar alimentos, recetas e ideas de comida relacionadas con IMO/SIBO. La seccion de alimentos ya puede consumir el backend REST local; el resto de secciones siguen usando mocks.
 
 ## Stack
 
@@ -29,14 +29,14 @@ El servidor local arranca por defecto en `http://localhost:3000`.
 
 ## Variables de entorno
 
-Copia `.env.example` a `.env.local` cuando haya valores reales.
+Copia `.env.example` a `.env.local` para activar el backend local.
 
 ```bash
 NEXT_PUBLIC_APP_NAME="IMO Meals"
-NEXT_PUBLIC_API_BASE_URL=""
+NEXT_PUBLIC_API_BASE_URL="http://localhost:4000"
 ```
 
-`NEXT_PUBLIC_API_BASE_URL` queda vacia mientras no exista backend.
+Si `NEXT_PUBLIC_API_BASE_URL` queda vacia, alimentos usa mocks y desactiva las acciones de escritura.
 
 ## Estructura
 
@@ -54,7 +54,7 @@ src/
 ## Decisiones iniciales
 
 - Los tipos de dominio viven en `src/lib/types` y se validan con Zod.
-- Los mocks viven en `src/lib/mock`; luego se reemplazaran por queries.
+- Los mocks viven en `src/lib/mock`; alimentos ya usa TanStack Query con fallback a mock si no hay API configurada.
 - TanStack Query ya envuelve la app desde `src/providers/query-provider.tsx`.
 - El cliente API esta centralizado en `src/lib/api/client.ts`.
 - La navegacion esta en `src/lib/constants/navigation.ts`.

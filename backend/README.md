@@ -1,22 +1,52 @@
 # IMO Foods Backend
 
-Scaffold reservado para la API futura de IMO Meals.
-
-## Objetivo futuro
-
-Exponer endpoints REST para:
-
-- `GET /foods`
-- `GET /recipes`
-- `GET /meal-ideas`
-- `GET /meal-logs`
-- `POST /meal-logs`
-- `GET /symptom-logs`
-- `POST /symptom-logs`
-- `GET /preferences`
-- `PATCH /preferences`
+API REST inicial para IMO Meals, implementada con NestJS y TypeScript.
 
 ## Estado actual
 
-Sin backend implementado. Esta carpeta existe para mantener la estructura del
-monorepo preparada antes de subir a GitHub.
+El modulo `foods` ya expone un CRUD completo con datos en memoria. Reiniciar el
+servidor restaura los datos mock iniciales.
+
+## Comandos
+
+```powershell
+npm install
+npm run dev
+npm run lint
+npm run typecheck
+npm run build
+```
+
+## Endpoints
+
+```text
+GET    /health
+GET    /foods
+GET    /foods?search=arroz
+GET    /foods?status=allowed
+GET    /foods?category=Proteina
+GET    /foods?tag=proteina
+GET    /foods/:id
+POST   /foods
+PATCH  /foods/:id
+DELETE /foods/:id
+```
+
+## Ejemplo de payload
+
+```json
+{
+  "name": "Merluza",
+  "category": "Proteina",
+  "status": "allowed",
+  "tolerance": 4,
+  "notes": "Mejor cocida o a la plancha.",
+  "tags": ["proteina", "cena"]
+}
+```
+
+## Persistencia futura
+
+La persistencia se conectara en `src/foods/foods.service.ts`, sustituyendo el
+`Map` en memoria por un repositorio o cliente de base de datos sin cambiar el
+contrato HTTP del controlador.

@@ -6,10 +6,10 @@ Monorepo personal para IMO Meals.
 
 ```text
 imo-foods/
-├── frontend/   # Next.js 15 + TypeScript + Tailwind
-├── backend/    # Scaffold reservado para la API futura
-├── docs/       # Notas de despliegue y arquitectura
-└── .github/    # Workflows de CI/CD
+|-- frontend/   # Next.js 15 + TypeScript + Tailwind
+|-- backend/    # API NestJS + TypeScript
+|-- docs/       # Notas de despliegue y arquitectura
+`-- .github/    # Workflows de CI/CD
 ```
 
 ## Frontend
@@ -23,21 +23,44 @@ npm.cmd run typecheck
 npm.cmd run build
 ```
 
+El frontend arranca normalmente en `http://localhost:3000`.
+
 ## Backend
 
-La carpeta `backend/` queda preparada para crear la API cuando se decida el stack.
-De momento solo contiene estructura base y no ejecuta servicios.
+```powershell
+cd backend
+npm.cmd install
+npm.cmd run dev
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run build
+```
+
+El backend arranca en `http://localhost:4000` y expone el CRUD de alimentos en
+`/foods`.
+
+## Conexion Frontend/Backend
+
+Para que el frontend use el backend local, configura:
+
+```text
+frontend/.env.local
+NEXT_PUBLIC_API_BASE_URL="http://localhost:4000"
+```
+
+La seccion de alimentos usa TanStack Query para leer, crear, editar y borrar.
+Si la variable queda vacia, muestra mocks y desactiva las acciones de escritura.
 
 ## CI/CD
 
-El workflow activo valida el frontend con:
+Los workflows activos validan frontend y backend con:
 
 - `npm ci`
 - `npm run lint`
 - `npm run typecheck`
 - `npm run build`
 
-Para despliegue automático, importa este repositorio en Vercel y configura:
+Para despliegue automatico, importa este repositorio en Vercel y configura:
 
 ```text
 Root Directory: frontend

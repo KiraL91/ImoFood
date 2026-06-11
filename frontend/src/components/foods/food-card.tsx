@@ -1,14 +1,26 @@
+import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { foodStatusMeta } from "@/lib/constants/status";
 import type { Food } from "@/lib/types/food";
 import { cn } from "@/lib/utils/cn";
 
 type FoodCardProps = {
+  canMutate?: boolean;
   food: Food;
+  isDeleting?: boolean;
+  onDelete?: (food: Food) => void;
+  onEdit?: (food: Food) => void;
 };
 
-export function FoodCard({ food }: FoodCardProps) {
+export function FoodCard({
+  canMutate = false,
+  food,
+  isDeleting = false,
+  onDelete,
+  onEdit,
+}: FoodCardProps) {
   const status = foodStatusMeta[food.status];
 
   return (
@@ -23,6 +35,29 @@ export function FoodCard({ food }: FoodCardProps) {
             {status.label}
           </Badge>
         </div>
+        {canMutate && (
+          <div className="mt-3 flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit?.(food)}
+            >
+              <Pencil aria-hidden="true" />
+              Editar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete?.(food)}
+              disabled={isDeleting}
+            >
+              <Trash2 aria-hidden="true" />
+              {isDeleting ? "Borrando..." : "Borrar"}
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {food.notes && (

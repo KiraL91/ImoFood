@@ -1,0 +1,29 @@
+import { ValidationPipe } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import "reflect-metadata";
+
+import { AppModule } from "./app.module";
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  app.enableCors({
+    origin:
+      process.env.CORS_ORIGIN?.split(",").map((origin) => origin.trim()) ??
+      true,
+  });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      forbidNonWhitelisted: true,
+      transform: true,
+      whitelist: true,
+    }),
+  );
+
+  const port = Number(process.env.PORT ?? 4000);
+
+  await app.listen(port);
+}
+
+void bootstrap();
