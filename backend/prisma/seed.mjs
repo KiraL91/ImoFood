@@ -1,8 +1,14 @@
-import type { Food } from "../types/food";
+import { PrismaClient } from "@prisma/client";
+import { config } from "dotenv";
 
-const seedTimestamp = "2026-06-10T00:00:00.000Z";
+config({ path: ".env.local" });
+config();
 
-export const initialFoods: Food[] = [
+const prisma = new PrismaClient();
+
+const seedTimestamp = new Date("2026-06-10T00:00:00.000Z");
+
+const foods = [
   {
     id: "food-001",
     name: "Arroz blanco",
@@ -11,8 +17,6 @@ export const initialFoods: Food[] = [
     tolerance: 5,
     notes: "Base neutra para comidas simples.",
     tags: ["bajo residuo", "sin gluten", "base"],
-    createdAt: seedTimestamp,
-    updatedAt: seedTimestamp,
   },
   {
     id: "food-002",
@@ -22,8 +26,6 @@ export const initialFoods: Food[] = [
     tolerance: 5,
     notes: "Mejor a la plancha, horno o cocida con poca grasa.",
     tags: ["proteina", "rapido", "salado"],
-    createdAt: seedTimestamp,
-    updatedAt: seedTimestamp,
   },
   {
     id: "food-003",
@@ -33,8 +35,6 @@ export const initialFoods: Food[] = [
     tolerance: 3,
     notes: "Probar sin piel y en racion pequena.",
     tags: ["verdura", "fase prueba"],
-    createdAt: seedTimestamp,
-    updatedAt: seedTimestamp,
   },
   {
     id: "food-004",
@@ -44,8 +44,6 @@ export const initialFoods: Food[] = [
     tolerance: 4,
     notes: "Util para desayunos y cenas rapidas.",
     tags: ["proteina", "desayuno"],
-    createdAt: seedTimestamp,
-    updatedAt: seedTimestamp,
   },
   {
     id: "food-005",
@@ -55,8 +53,6 @@ export const initialFoods: Food[] = [
     tolerance: 2,
     notes: "Puede ser pesado; revisar cantidad y momento del dia.",
     tags: ["grasa", "porcion controlada"],
-    createdAt: seedTimestamp,
-    updatedAt: seedTimestamp,
   },
   {
     id: "food-006",
@@ -66,8 +62,6 @@ export const initialFoods: Food[] = [
     tolerance: 1,
     notes: "Alta probabilidad de sintomas en fases restrictivas.",
     tags: ["fodmap", "evitar"],
-    createdAt: seedTimestamp,
-    updatedAt: seedTimestamp,
   },
   {
     id: "food-007",
@@ -77,8 +71,6 @@ export const initialFoods: Food[] = [
     tolerance: 3,
     notes: "Introducir solo si hay buena tolerancia a lacteos.",
     tags: ["lacteo", "probio"],
-    createdAt: seedTimestamp,
-    updatedAt: seedTimestamp,
   },
   {
     id: "food-008",
@@ -88,7 +80,19 @@ export const initialFoods: Food[] = [
     tolerance: 2,
     notes: "Mejor en pequena cantidad y no demasiado maduro.",
     tags: ["fruta", "porcion"],
-    createdAt: seedTimestamp,
-    updatedAt: seedTimestamp,
   },
 ];
+
+for (const food of foods) {
+  await prisma.food.upsert({
+    where: { id: food.id },
+    update: food,
+    create: {
+      ...food,
+      createdAt: seedTimestamp,
+      updatedAt: seedTimestamp,
+    },
+  });
+}
+
+await prisma.$disconnect();

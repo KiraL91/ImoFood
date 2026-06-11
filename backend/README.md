@@ -4,8 +4,8 @@ API REST inicial para IMO Meals, implementada con NestJS y TypeScript.
 
 ## Estado actual
 
-El modulo `foods` ya expone un CRUD completo con datos en memoria. Reiniciar el
-servidor restaura los datos mock iniciales.
+El modulo `foods` expone un CRUD completo persistido en PostgreSQL mediante
+Prisma. En desarrollo apunta a Supabase Dev usando `backend/.env.local`.
 
 ## Comandos
 
@@ -15,7 +15,25 @@ npm run dev
 npm run lint
 npm run typecheck
 npm run build
+npm run vercel-build
+npm run db:migrate -- --name nombre_migracion
+npm run db:seed
+npm run db:deploy
 ```
+
+`db:migrate` se usa en desarrollo. `db:deploy` aplica migraciones ya creadas en
+produccion. `vercel-build` ejecuta `db:deploy` y despues compila el backend.
+
+## Variables de entorno
+
+```env
+PORT=4000
+CORS_ORIGIN=http://localhost:3000,http://localhost:3001
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+```
+
+No subas `.env.local` al repositorio.
 
 ## Endpoints
 
@@ -45,8 +63,8 @@ DELETE /foods/:id
 }
 ```
 
-## Persistencia futura
+## Persistencia
 
-La persistencia se conectara en `src/foods/foods.service.ts`, sustituyendo el
-`Map` en memoria por un repositorio o cliente de base de datos sin cambiar el
-contrato HTTP del controlador.
+El esquema vive en `prisma/schema.prisma` y las migraciones en
+`prisma/migrations`. Prisma Client se inyecta en Nest mediante
+`src/prisma/prisma.service.ts`.

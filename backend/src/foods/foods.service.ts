@@ -3,116 +3,154 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import {
+  Food as PrismaFood,
+  FoodStatus as PrismaFoodStatus,
+  Prisma,
+} from "@prisma/client";
 
 import type { CreateFoodDto } from "./dto/create-food.dto";
 import type { UpdateFoodDto } from "./dto/update-food.dto";
-import { initialFoods } from "./mock/initial-foods";
 import { FOOD_STATUSES, type Food, type FoodFilters } from "./types/food";
+import { PrismaService } from "../prisma/prisma.service";
+
+const foodStatusToPrisma: Record<Food["status"], PrismaFoodStatus> = {
+  allowed: PrismaFoodStatus.allowed,
+  avoid: PrismaFoodStatus.avoid,
+  caution: PrismaFoodStatus.caution,
+  testing: PrismaFoodStatus.testing,
+};
 
 @Injectable()
 export class FoodsService {
-  private readonly foods = new Map<string, Food>(
-    initialFoods.map((food) => [food.id, this.cloneFood(food)]),
-  );
+  constructor(private readonly prisma: PrismaService) {}
 
-  findAll(filters: FoodFilters = {}): Food[] {
+  async findAll(filters: FoodFilters = {}): Promise<Food[]> {
     this.assertValidStatus(filters.status);
 
     const search = filters.search?.trim().toLowerCase();
     const category = filters.category?.trim().toLowerCase();
     const tag = filters.tag?.trim().toLowerCase();
+    const where: Prisma.FoodWhereInput = {};
 
-    return Array.from(this.foods.values())
-      .filter((food) => {
-        if (filters.status && food.status !== filters.status) {
-          return false;
-        }
+    if (filters.status) {
+      where.status = foodStatusToPrisma[filters.status];
+    }
 
-        if (category && food.category.toLowerCase() !== category) {
-          return false;
-        }
+    if (category) {
+      where.category = {
+        equals: category,
+        mode: "insensitive",
+      };
+    }
 
-        if (
-          tag &&
-          !food.tags.some((foodTag) => foodTag.toLowerCase() === tag)
-        ) {
-          return false;
-        }
+    if (tag) {
+      where.tags = {
+        has: tag,
+      };
+    }
 
-        if (!search) {
-          return true;
-        }
+    if (search) {
+      where.OR = [
+        {
+          name: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          category: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          notes: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          tags: {
+            has: search,
+          },
+        },
+      ];
+    }
 
-        const searchableText = [
-          food.name,
-          food.category,
-          food.notes,
-          ...food.tags,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+    const foods = await this.prisma.food.findMany({
+      orderBy: {
+        name: "asc",
+      },
+      where,
+    });
 
-        return searchableText.includes(search);
-      })
-      .sort((left, right) => left.name.localeCompare(right.name))
-      .map((food) => this.cloneFood(food));
+    return foods.map((food) => this.toFood(food));
   }
 
-  findOne(id: string): Food {
-    const food = this.foods.get(id);
+  async findOne(id: string): Promise<Food> {
+    const food = await this.prisma.food.findUnique({
+      where: {
+        id,
+      },
+    });
 
     if (!food) {
       throw new NotFoundException(`Food with id "${id}" was not found.`);
     }
 
-    return this.cloneFood(food);
+    return this.toFood(food);
   }
 
-  create(createFoodDto: CreateFoodDto): Food {
-    const now = new Date().toISOString();
-    const food: Food = {
-      ...createFoodDto,
-      id: randomUUID(),
-      name: createFoodDto.name.trim(),
-      category: createFoodDto.category.trim(),
-      notes: createFoodDto.notes?.trim(),
-      tags: this.normalizeTags(createFoodDto.tags),
-      createdAt: now,
-      updatedAt: now,
-    };
+  async create(createFoodDto: CreateFoodDto): Promise<Food> {
+    const food = await this.prisma.food.create({
+      data: {
+        category: createFoodDto.category.trim(),
+        name: createFoodDto.name.trim(),
+        notes: createFoodDto.notes?.trim(),
+        status: foodStatusToPrisma[createFoodDto.status],
+        tags: this.normalizeTags(createFoodDto.tags),
+        tolerance: createFoodDto.tolerance,
+      },
+    });
 
-    this.foods.set(food.id, food);
-
-    return this.cloneFood(food);
+    return this.toFood(food);
   }
 
-  update(id: string, updateFoodDto: UpdateFoodDto): Food {
-    const currentFood = this.findOne(id);
-    const now = new Date().toISOString();
+  async update(id: string, updateFoodDto: UpdateFoodDto): Promise<Food> {
+    await this.findOne(id);
 
-    const updatedFood: Food = {
-      ...currentFood,
-      ...updateFoodDto,
-      name: updateFoodDto.name?.trim() ?? currentFood.name,
-      category: updateFoodDto.category?.trim() ?? currentFood.category,
-      notes: updateFoodDto.notes?.trim() ?? currentFood.notes,
+    const data: Prisma.FoodUpdateInput = {
+      category: updateFoodDto.category?.trim(),
+      name: updateFoodDto.name?.trim(),
+      notes: updateFoodDto.notes?.trim(),
+      status: updateFoodDto.status
+        ? foodStatusToPrisma[updateFoodDto.status]
+        : undefined,
       tags: updateFoodDto.tags
         ? this.normalizeTags(updateFoodDto.tags)
-        : currentFood.tags,
-      updatedAt: now,
+        : undefined,
+      tolerance: updateFoodDto.tolerance,
     };
 
-    this.foods.set(id, updatedFood);
+    const updatedFood = await this.prisma.food.update({
+      data,
+      where: {
+        id,
+      },
+    });
 
-    return this.cloneFood(updatedFood);
+    return this.toFood(updatedFood);
   }
 
-  remove(id: string): void {
-    if (!this.foods.delete(id)) {
-      throw new NotFoundException(`Food with id "${id}" was not found.`);
-    }
+  async remove(id: string): Promise<void> {
+    await this.findOne(id);
+
+    await this.prisma.food.delete({
+      where: {
+        id,
+      },
+    });
   }
 
   private assertValidStatus(status?: string): void {
@@ -129,10 +167,17 @@ export class FoodsService {
     );
   }
 
-  private cloneFood(food: Food): Food {
+  private toFood(food: PrismaFood): Food {
     return {
-      ...food,
+      category: food.category,
+      createdAt: food.createdAt.toISOString(),
+      id: food.id,
+      name: food.name,
+      notes: food.notes ?? undefined,
+      status: food.status,
       tags: [...food.tags],
+      tolerance: food.tolerance as Food["tolerance"],
+      updatedAt: food.updatedAt.toISOString(),
     };
   }
 }

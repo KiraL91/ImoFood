@@ -37,7 +37,16 @@ npm.cmd run build
 ```
 
 El backend arranca en `http://localhost:4000` y expone el CRUD de alimentos en
-`/foods`.
+`/foods`. La persistencia usa Prisma + PostgreSQL en Supabase.
+
+Comandos de base de datos:
+
+```powershell
+cd backend
+npm.cmd run db:migrate -- --name nombre_migracion
+npm.cmd run db:seed
+npm.cmd run db:deploy
+```
 
 ## Conexion Frontend/Backend
 

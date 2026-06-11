@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum FoodStatus {
+  allowed
+  testing
+  caution
+  avoid
+}
+
+model Food {
+  id        String     @id @default(cuid())
+  name      String
+  category  String
+  status    FoodStatus
+  tolerance Int
+  notes     String?
+  tags      String[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([category])
+  @@index([status])
+}
