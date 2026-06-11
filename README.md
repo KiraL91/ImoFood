@@ -60,6 +60,16 @@ NEXT_PUBLIC_API_BASE_URL="http://localhost:4000"
 La seccion de alimentos usa TanStack Query para leer, crear, editar y borrar.
 Si la variable queda vacia, muestra mocks y desactiva las acciones de escritura.
 
+## Usuarios de prueba
+
+El seed del backend crea usuarios locales para validar roles y permisos:
+
+```text
+owner / owner       control completo
+member / member     lectura, creacion y edicion
+readonly / readonly solo lectura
+```
+
 ## CI/CD
 
 Los workflows activos validan frontend y backend con:

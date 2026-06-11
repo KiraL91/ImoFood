@@ -1,13 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { LogIn, LogOut, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getNavigationItem } from "@/lib/constants/navigation";
+import { useAuth } from "@/providers/auth-provider";
 
 export function Header() {
   const pathname = usePathname();
   const currentItem = getNavigationItem(pathname);
+  const { isAuthenticated, logout, user } = useAuth();
 
   return (
     <header className="sticky top-0 z-20 border-b bg-background/90 backdrop-blur">
@@ -18,10 +22,30 @@ export function Header() {
             {currentItem.label}
           </h2>
         </div>
-        <Button variant="outline" size="sm" className="hidden shrink-0 sm:inline-flex">
-          <Sparkles aria-hidden="true" />
-          IA futura
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+            <Sparkles aria-hidden="true" />
+            IA futura
+          </Button>
+          {isAuthenticated && user ? (
+            <>
+              <Badge variant="secondary" className="hidden sm:inline-flex">
+                {user.role}
+              </Badge>
+              <Button type="button" variant="outline" size="sm" onClick={logout}>
+                <LogOut aria-hidden="true" />
+                Salir
+              </Button>
+            </>
+          ) : (
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/login">
+                <LogIn aria-hidden="true" />
+                Entrar
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );

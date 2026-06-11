@@ -17,6 +17,7 @@ import { foodStatusMeta, foodStatusOrder } from "@/lib/constants/status";
 import { env } from "@/lib/env";
 import type { Food, FoodStatus } from "@/lib/types/food";
 import { cn } from "@/lib/utils/cn";
+import { useAuth } from "@/providers/auth-provider";
 
 type FilterValue = FoodStatus | "all";
 
@@ -32,12 +33,30 @@ export function FoodsExplorer() {
   const [editingFood, setEditingFood] = useState<Food | undefined>();
   const [mutationError, setMutationError] = useState<string | null>(null);
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
+  const { hasPermission, isAuthenticated } = useAuth();
+  const canCreateFood = hasPermission("foods:create");
+  const canUpdateFood = hasPermission("foods:update");
+  const canDeleteFood = hasPermission("foods:delete");
   const foodsQuery = useFoods();
   const createFoodMutation = useCreateFood();
   const updateFoodMutation = useUpdateFood();
   const deleteFoodMutation = useDeleteFood();
-  const foods = useMemo(() => foodsQuery.data ?? [], [foodsQuery.data]);
+  const foods = useMemo(
+    () => (hasBackendConfigured && !isAuthenticated ? [] : (foodsQuery.data ?? [])),
+    [foodsQuery.data, hasBackendConfigured, isAuthenticated],
+  );
   const isSubmitting = createFoodMutation.isPending || updateFoodMutation.isPending;
+  const isFormDisabled =
+    !hasBackendConfigured ||
+    !isAuthenticated ||
+    (editingFood ? !canUpdateFood : !canCreateFood);
+  const disabledReason = !hasBackendConfigured
+    ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend."
+    : !isAuthenticated
+      ? "Inicia sesion para usar el CRUD real de alimentos."
+      : editingFood
+        ? "Tu rol no permite editar alimentos."
+        : "Tu rol no permite crear alimentos.";
 
   const filteredFoods = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -97,8 +116,9 @@ export function FoodsExplorer() {
   return (
     <div className="space-y-5">
       <NewFoodDraftCard
+        disabledReason={disabledReason}
         initialFood={editingFood}
-        isDisabled={!hasBackendConfigured}
+        isDisabled={isFormDisabled}
         isSubmitting={isSubmitting}
         mode={editingFood ? "edit" : "create"}
         onCancel={() => setEditingFood(undefined)}
@@ -111,6 +131,16 @@ export function FoodsExplorer() {
           <p>
             Mostrando datos mock. Para usar el CRUD real, levanta el backend y define
             NEXT_PUBLIC_API_BASE_URL=http://localhost:4000 en frontend/.env.local.
+          </p>
+        </div>
+      )}
+
+      {hasBackendConfigured && !isAuthenticated && (
+        <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
+          <Server className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <p>
+            Inicia sesion en /login para consultar alimentos desde el backend con
+            permisos.
           </p>
         </div>
       )}
@@ -184,7 +214,8 @@ export function FoodsExplorer() {
         {filteredFoods.map((food) => (
           <FoodCard
             key={food.id}
-            canMutate={hasBackendConfigured}
+            canDelete={hasBackendConfigured && isAuthenticated && canDeleteFood}
+            canEdit={hasBackendConfigured && isAuthenticated && canUpdateFood}
             food={food}
             isDeleting={
               deleteFoodMutation.isPending && deleteFoodMutation.variables === food.id

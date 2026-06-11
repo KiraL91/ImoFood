@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -10,6 +11,12 @@ type AppShellProps = {
 };
 
 export function AppShell({ children }: AppShellProps) {
+  const pathname = usePathname();
+
+  if (pathname === "/login") {
+    return <div className="min-h-dvh bg-background text-foreground">{children}</div>;
+  }
+
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <Sidebar />

@@ -4,13 +4,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFood, deleteFood, getFoods, updateFood } from "@/features/foods/foods-api";
 import { env } from "@/lib/env";
 import { foods as mockFoods } from "@/lib/mock/foods";
+import { useAuth } from "@/providers/auth-provider";
 
 export const foodQueryKeys = {
   all: ["foods"] as const,
 };
 
 export function useFoods() {
+  const { isAuthenticated } = useAuth();
+
   return useQuery({
+    enabled: !env.NEXT_PUBLIC_API_BASE_URL || isAuthenticated,
     queryKey: foodQueryKeys.all,
     queryFn: async () => {
       if (!env.NEXT_PUBLIC_API_BASE_URL) {

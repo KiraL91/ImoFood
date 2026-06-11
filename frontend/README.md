@@ -38,6 +38,19 @@ NEXT_PUBLIC_API_BASE_URL="http://localhost:4000"
 
 Si `NEXT_PUBLIC_API_BASE_URL` queda vacia, alimentos usa mocks y desactiva las acciones de escritura.
 
+## Login de prueba
+
+La ruta `/login` permite iniciar sesion contra el backend con usuarios semilla:
+
+```text
+owner / owner
+member / member
+readonly / readonly
+```
+
+El frontend guarda la sesion en `localStorage` para este MVP y envia el token en
+`Authorization: Bearer <token>`.
+
 ## Estructura
 
 ```text

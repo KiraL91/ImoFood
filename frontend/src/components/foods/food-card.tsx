@@ -7,7 +7,8 @@ import type { Food } from "@/lib/types/food";
 import { cn } from "@/lib/utils/cn";
 
 type FoodCardProps = {
-  canMutate?: boolean;
+  canDelete?: boolean;
+  canEdit?: boolean;
   food: Food;
   isDeleting?: boolean;
   onDelete?: (food: Food) => void;
@@ -15,13 +16,15 @@ type FoodCardProps = {
 };
 
 export function FoodCard({
-  canMutate = false,
+  canDelete = false,
+  canEdit = false,
   food,
   isDeleting = false,
   onDelete,
   onEdit,
 }: FoodCardProps) {
   const status = foodStatusMeta[food.status];
+  const showActions = canEdit || canDelete;
 
   return (
     <Card className="h-full">
@@ -35,27 +38,31 @@ export function FoodCard({
             {status.label}
           </Badge>
         </div>
-        {canMutate && (
+        {showActions && (
           <div className="mt-3 flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit?.(food)}
-            >
-              <Pencil aria-hidden="true" />
-              Editar
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete?.(food)}
-              disabled={isDeleting}
-            >
-              <Trash2 aria-hidden="true" />
-              {isDeleting ? "Borrando..." : "Borrar"}
-            </Button>
+            {canEdit && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onEdit?.(food)}
+              >
+                <Pencil aria-hidden="true" />
+                Editar
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete?.(food)}
+                disabled={isDeleting}
+              >
+                <Trash2 aria-hidden="true" />
+                {isDeleting ? "Borrando..." : "Borrar"}
+              </Button>
+            )}
           </div>
         )}
       </CardHeader>

@@ -24,6 +24,7 @@ type FoodFormState = {
 };
 
 type NewFoodDraftCardProps = {
+  disabledReason?: string;
   initialFood?: Food;
   isDisabled?: boolean;
   isSubmitting?: boolean;
@@ -71,6 +72,7 @@ function toFoodInput(formState: FoodFormState): CreateFoodInput {
 }
 
 export function NewFoodDraftCard({
+  disabledReason,
   initialFood,
   isDisabled = false,
   isSubmitting = false,
@@ -111,7 +113,8 @@ export function NewFoodDraftCard({
             <CardTitle>{isEditing ? "Editar alimento" : "Nuevo alimento"}</CardTitle>
             <CardDescription>
               {isDisabled
-                ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend."
+                ? (disabledReason ??
+                  "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend.")
                 : "Guarda cambios en la API local de alimentos."}
             </CardDescription>
           </div>

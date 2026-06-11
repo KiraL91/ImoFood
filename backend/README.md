@@ -29,6 +29,7 @@ produccion. `vercel-build` ejecuta `db:deploy` y despues compila el backend.
 ```env
 PORT=4000
 CORS_ORIGIN=http://localhost:3000,http://localhost:3001
+JWT_SECRET="replace-with-a-long-random-secret"
 DATABASE_URL="postgresql://..."
 DIRECT_URL="postgresql://..."
 ```
@@ -68,3 +69,24 @@ DELETE /foods/:id
 El esquema vive en `prisma/schema.prisma` y las migraciones en
 `prisma/migrations`. Prisma Client se inyecta en Nest mediante
 `src/prisma/prisma.service.ts`.
+
+## Autenticacion y permisos
+
+El backend incluye auth local de MVP con JWT y usuarios persistidos en
+PostgreSQL. El seed crea tres usuarios de prueba:
+
+```text
+owner / owner       foods:read, foods:create, foods:update, foods:delete
+member / member     foods:read, foods:create, foods:update
+readonly / readonly foods:read
+```
+
+Endpoints:
+
+```text
+POST /auth/login
+GET  /auth/me
+```
+
+Los endpoints de `/foods` requieren `Authorization: Bearer <token>` y el permiso
+correspondiente.

@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { randomBytes, scryptSync } from "node:crypto";
 import { config } from "dotenv";
 
 config({ path: ".env.local" });
@@ -7,6 +8,37 @@ config();
 const prisma = new PrismaClient();
 
 const seedTimestamp = new Date("2026-06-10T00:00:00.000Z");
+
+function hashPassword(password) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
+
+  return `scrypt:${salt}:${hash}`;
+}
+
+const users = [
+  {
+    username: "owner",
+    password: "owner",
+    role: "owner",
+    displayName: "Owner",
+    email: "owner@imo-meals.local",
+  },
+  {
+    username: "member",
+    password: "member",
+    role: "member",
+    displayName: "Member",
+    email: "member@imo-meals.local",
+  },
+  {
+    username: "readonly",
+    password: "readonly",
+    role: "readonly",
+    displayName: "Readonly",
+    email: "readonly@imo-meals.local",
+  },
+];
 
 const foods = [
   {
@@ -937,5 +969,36 @@ const totalCount = await prisma.food.count();
 console.log(
   `Food seed completed. Inserted ${result.count}, seed records ${seededCount}/100, total foods ${totalCount}.`,
 );
+
+for (const user of users) {
+  await prisma.appUser.upsert({
+    where: {
+      username: user.username,
+    },
+    update: {
+      displayName: user.displayName,
+      email: user.email,
+      passwordHash: hashPassword(user.password),
+      role: user.role,
+    },
+    create: {
+      displayName: user.displayName,
+      email: user.email,
+      passwordHash: hashPassword(user.password),
+      role: user.role,
+      username: user.username,
+    },
+  });
+}
+
+const seededUsersCount = await prisma.appUser.count({
+  where: {
+    username: {
+      in: users.map((user) => user.username),
+    },
+  },
+});
+
+console.log(`User seed completed. Seed users ${seededUsersCount}/3.`);
 
 await prisma.$disconnect();

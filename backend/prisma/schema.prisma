@@ -15,6 +15,12 @@ enum FoodStatus {
   avoid
 }
 
+enum UserRole {
+  owner
+  member
+  readonly
+}
+
 model Food {
   id        String     @id @default(cuid())
   name      String
@@ -28,4 +34,17 @@ model Food {
 
   @@index([category])
   @@index([status])
+}
+
+model AppUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String?  @unique
+  displayName  String?
+  role         UserRole @default(member)
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([role])
 }

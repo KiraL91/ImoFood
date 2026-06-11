@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import { Leaf } from "lucide-react";
 import { navigationItems } from "@/lib/constants/navigation";
 import { cn } from "@/lib/utils/cn";
+import { useAuth } from "@/providers/auth-provider";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r bg-card lg:flex lg:flex-col">
@@ -49,9 +51,16 @@ export function Sidebar() {
         })}
       </nav>
       <div className="border-t px-6 py-5">
-        <p className="text-xs leading-5 text-muted-foreground">
-          Datos mock locales. Sin backend conectado.
-        </p>
+        {isAuthenticated && user ? (
+          <div className="text-xs leading-5 text-muted-foreground">
+            <p className="font-medium text-foreground">{user.username}</p>
+            <p>Rol activo: {user.role}</p>
+          </div>
+        ) : (
+          <p className="text-xs leading-5 text-muted-foreground">
+            Inicia sesion para usar permisos contra el backend.
+          </p>
+        )}
       </div>
     </aside>
   );
