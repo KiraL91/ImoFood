@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import {
@@ -73,7 +72,7 @@ export function LoginPanel() {
 
     try {
       await login({ password, username });
-      router.push("/foods");
+      router.push("/");
     } catch (loginError) {
       setError(
         loginError instanceof Error
@@ -229,11 +228,8 @@ export function LoginPanel() {
             </CardContent>
           </Card>
 
-          <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground">
             <span>Auth local de MVP</span>
-            <Link href="/" className="font-medium text-primary">
-              Volver al panel
-            </Link>
           </div>
         </div>
       </section>

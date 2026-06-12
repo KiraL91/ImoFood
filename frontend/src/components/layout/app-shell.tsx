@@ -1,10 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Sidebar } from "@/components/layout/sidebar";
+import { useAuth } from "@/providers/auth-provider";
 
 type AppShellProps = {
   children: ReactNode;
@@ -12,8 +13,40 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+  const isLoginPath = pathname === "/login";
 
-  if (pathname === "/login") {
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    if (!isAuthenticated && !isLoginPath) {
+      router.replace("/login");
+      return;
+    }
+
+    if (isAuthenticated && isLoginPath) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, isLoading, isLoginPath, router]);
+
+  if (
+    isLoading ||
+    (!isAuthenticated && !isLoginPath) ||
+    (isAuthenticated && isLoginPath)
+  ) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background px-4 text-foreground">
+        <div className="rounded-lg border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
+          Preparando sesion...
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoginPath) {
     return <div className="min-h-dvh bg-background text-foreground">{children}</div>;
   }
 
