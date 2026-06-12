@@ -1,5 +1,5 @@
-import { CalendarClock, CookingPot, Utensils } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { CalendarClock, Pencil, Trash2, Utensils } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,49 +11,74 @@ import type { MealLog } from "@/lib/types/meal-log";
 import { formatDateTime } from "@/lib/utils/format-date";
 
 type MealLogCardProps = {
+  canDelete?: boolean;
+  canEdit?: boolean;
+  isDeleting?: boolean;
   mealLog: MealLog;
-  recipeName?: string;
-  foodNames?: string[];
+  onDelete?: (mealLog: MealLog) => void;
+  onEdit?: (mealLog: MealLog) => void;
 };
 
-export function MealLogCard({ mealLog, recipeName, foodNames = [] }: MealLogCardProps) {
+export function MealLogCard({
+  canDelete = false,
+  canEdit = false,
+  isDeleting = false,
+  mealLog,
+  onDelete,
+  onEdit,
+}: MealLogCardProps) {
   return (
     <Card className="h-full">
       <CardHeader>
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
-            <Utensils className="size-4" aria-hidden="true" />
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
+              <Utensils className="size-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle>{mealLog.description}</CardTitle>
+              <CardDescription className="inline-flex items-center gap-1.5">
+                <CalendarClock className="size-4" aria-hidden="true" />
+                {formatDateTime(mealLog.consumedAt)}
+              </CardDescription>
+            </div>
           </div>
-          <div className="min-w-0">
-            <CardTitle>{mealLog.description}</CardTitle>
-            <CardDescription className="inline-flex items-center gap-1.5">
-              <CalendarClock className="size-4" aria-hidden="true" />
-              {formatDateTime(mealLog.consumedAt)}
-            </CardDescription>
-          </div>
+
+          {(canEdit || canDelete) && (
+            <div className="flex shrink-0 gap-1">
+              {canEdit && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  title="Editar comida"
+                  onClick={() => onEdit?.(mealLog)}
+                >
+                  <Pencil aria-hidden="true" />
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  title="Borrar comida"
+                  onClick={() => onDelete?.(mealLog)}
+                  disabled={isDeleting}
+                >
+                  <Trash2 aria-hidden="true" />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {recipeName && (
-          <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-            <span className="inline-flex items-center gap-2 font-medium">
-              <CookingPot className="size-4 text-primary" aria-hidden="true" />
-              {recipeName}
-            </span>
-          </div>
-        )}
-
-        {mealLog.notes && (
+      <CardContent>
+        {mealLog.notes ? (
           <p className="text-sm leading-6 text-muted-foreground">{mealLog.notes}</p>
-        )}
-
-        {foodNames.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {foodNames.map((foodName) => (
-              <Badge key={foodName} variant="secondary">
-                {foodName}
-              </Badge>
-            ))}
+        ) : (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            Sin notas adicionales.
           </div>
         )}
       </CardContent>

@@ -1117,6 +1117,39 @@ const recipes = [
   },
 ];
 
+const mealLogs = [
+  {
+    id: "meal-log-001",
+    consumedAt: new Date("2026-06-10T08:15:00.000Z"),
+    description: "Desayuno salado con huevo y arroz blanco",
+    notes: "Racion pequena, sin cafe. Buena saciedad.",
+  },
+  {
+    id: "meal-log-002",
+    consumedAt: new Date("2026-06-09T13:45:00.000Z"),
+    description: "Bowl de arroz con pollo",
+    notes: "Comida segura antes de una tarde con reuniones.",
+  },
+  {
+    id: "meal-log-003",
+    consumedAt: new Date("2026-06-08T20:10:00.000Z"),
+    description: "Prueba controlada con crema de calabacin",
+    notes: "Media racion de calabacin, observar sintomas nocturnos.",
+  },
+  {
+    id: "meal-log-004",
+    consumedAt: new Date("2026-06-07T10:30:00.000Z"),
+    description: "Media manana con yogur sin lactosa",
+    notes: "Introduccion puntual, sin mezclar con otros alimentos nuevos.",
+  },
+  {
+    id: "meal-log-005",
+    consumedAt: new Date("2026-06-06T21:00:00.000Z"),
+    description: "Cena ligera de tortilla y zanahoria cocida",
+    notes: "Cena temprana para comparar descanso y sintomas al dia siguiente.",
+  },
+];
+
 if (foods.length !== 100) {
   throw new Error(`Expected 100 seed foods, received ${foods.length}.`);
 }
@@ -1191,6 +1224,27 @@ const seededRecipesCount = await prisma.recipe.count({
 
 console.log(
   `Recipe seed completed. Inserted ${recipeResult.count}, seed records ${seededRecipesCount}/${recipes.length}.`,
+);
+
+const mealLogResult = await prisma.mealLog.createMany({
+  data: mealLogs.map((mealLog) => ({
+    ...mealLog,
+    createdAt: seedTimestamp,
+    updatedAt: seedTimestamp,
+  })),
+  skipDuplicates: true,
+});
+
+const seededMealLogsCount = await prisma.mealLog.count({
+  where: {
+    id: {
+      in: mealLogs.map((mealLog) => mealLog.id),
+    },
+  },
+});
+
+console.log(
+  `Meal log seed completed. Inserted ${mealLogResult.count}, seed records ${seededMealLogsCount}/${mealLogs.length}.`,
 );
 
 for (const user of users) {

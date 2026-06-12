@@ -11,6 +11,10 @@ export const permissions = [
   "recipes:create",
   "recipes:update",
   "recipes:delete",
+  "meal-logs:read",
+  "meal-logs:create",
+  "meal-logs:update",
+  "meal-logs:delete",
 ] as const;
 
 export type Permission = (typeof permissions)[number];
@@ -25,6 +29,10 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     "recipes:create",
     "recipes:update",
     "recipes:delete",
+    "meal-logs:read",
+    "meal-logs:create",
+    "meal-logs:update",
+    "meal-logs:delete",
   ],
   [UserRole.member]: [
     "foods:read",
@@ -33,8 +41,11 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     "recipes:read",
     "recipes:create",
     "recipes:update",
+    "meal-logs:read",
+    "meal-logs:create",
+    "meal-logs:update",
   ],
-  [UserRole.readonly]: ["foods:read", "recipes:read"],
+  [UserRole.readonly]: ["foods:read", "recipes:read", "meal-logs:read"],
 };
 
 export function getRolePermissions(role: UserRole): Permission[] {

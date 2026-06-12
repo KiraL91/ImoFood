@@ -53,6 +53,17 @@ model Recipe {
   @@index([rating])
 }
 
+model MealLog {
+  id          String   @id @default(cuid())
+  consumedAt  DateTime
+  description String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([consumedAt])
+}
+
 model AppUser {
   id           String   @id @default(cuid())
   username     String   @unique

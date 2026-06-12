@@ -8,7 +8,11 @@ export type Permission =
   | "recipes:read"
   | "recipes:create"
   | "recipes:update"
-  | "recipes:delete";
+  | "recipes:delete"
+  | "meal-logs:read"
+  | "meal-logs:create"
+  | "meal-logs:update"
+  | "meal-logs:delete";
 
 export type AuthUser = {
   displayName?: string;
