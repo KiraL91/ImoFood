@@ -1,16 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Star, X } from "lucide-react";
+import { Search, Server, Star, X } from "lucide-react";
+import { RecipeDraftCard } from "@/components/recipes/recipe-draft-card";
 import { RecipeCard } from "@/components/recipes/recipe-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { CreateRecipeInput } from "@/features/recipes/recipes-api";
+import {
+  useCreateRecipe,
+  useDeleteRecipe,
+  useRecipes,
+  useUpdateRecipe,
+} from "@/features/recipes/recipes-queries";
+import { env } from "@/lib/env";
 import type { Recipe } from "@/lib/types/recipe";
 import { cn } from "@/lib/utils/cn";
-
-type RecipesExplorerProps = {
-  recipes: Recipe[];
-};
+import { useAuth } from "@/providers/auth-provider";
 
 type MinRatingFilter = 0 | 3 | 4 | 5;
 
@@ -25,10 +31,43 @@ function normalize(value: string) {
   return value.trim().toLowerCase();
 }
 
-export function RecipesExplorer({ recipes }: RecipesExplorerProps) {
+function getErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "No se ha podido completar la operacion.";
+}
+
+export function RecipesExplorer() {
   const [query, setQuery] = useState("");
   const [minRating, setMinRating] = useState<MinRatingFilter>(0);
   const [selectedIngredient, setSelectedIngredient] = useState<string | null>(null);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | undefined>();
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
+  const { hasPermission, isAuthenticated } = useAuth();
+  const canCreateRecipe = hasPermission("recipes:create");
+  const canUpdateRecipe = hasPermission("recipes:update");
+  const canDeleteRecipe = hasPermission("recipes:delete");
+  const recipesQuery = useRecipes();
+  const createRecipeMutation = useCreateRecipe();
+  const updateRecipeMutation = useUpdateRecipe();
+  const deleteRecipeMutation = useDeleteRecipe();
+  const recipes = useMemo(
+    () => (hasBackendConfigured && !isAuthenticated ? [] : (recipesQuery.data ?? [])),
+    [hasBackendConfigured, isAuthenticated, recipesQuery.data],
+  );
+  const isSubmitting = createRecipeMutation.isPending || updateRecipeMutation.isPending;
+  const isFormDisabled =
+    !hasBackendConfigured ||
+    !isAuthenticated ||
+    (editingRecipe ? !canUpdateRecipe : !canCreateRecipe);
+  const disabledReason = !hasBackendConfigured
+    ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar recetas contra el backend."
+    : !isAuthenticated
+      ? "Inicia sesion para usar el CRUD real de recetas."
+      : editingRecipe
+        ? "Tu rol no permite editar recetas."
+        : "Tu rol no permite crear recetas.";
 
   const frequentIngredients = useMemo(() => {
     const counts = new Map<string, number>();
@@ -76,8 +115,101 @@ export function RecipesExplorer({ recipes }: RecipesExplorerProps) {
   const hasActiveFilters =
     query.trim().length > 0 || minRating !== 0 || selectedIngredient !== null;
 
+  async function handleRecipeSubmit(input: CreateRecipeInput) {
+    setMutationError(null);
+
+    try {
+      if (editingRecipe) {
+        await updateRecipeMutation.mutateAsync({
+          id: editingRecipe.id,
+          input,
+        });
+        setEditingRecipe(undefined);
+        return;
+      }
+
+      await createRecipeMutation.mutateAsync(input);
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
+    }
+  }
+
+  async function handleDeleteRecipe(recipe: Recipe) {
+    const confirmed = window.confirm(`Borrar "${recipe.name}" de tus recetas?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setMutationError(null);
+
+    try {
+      await deleteRecipeMutation.mutateAsync(recipe.id);
+
+      if (editingRecipe?.id === recipe.id) {
+        setEditingRecipe(undefined);
+      }
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
+    }
+  }
+
+  async function handleRatingChange(
+    recipe: Recipe,
+    rating: NonNullable<Recipe["rating"]>,
+  ) {
+    if (!canUpdateRecipe) {
+      return;
+    }
+
+    setMutationError(null);
+
+    try {
+      await updateRecipeMutation.mutateAsync({
+        id: recipe.id,
+        input: {
+          rating,
+        },
+      });
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
+    }
+  }
+
   return (
     <div className="space-y-5">
+      <RecipeDraftCard
+        disabledReason={disabledReason}
+        initialRecipe={editingRecipe}
+        isDisabled={isFormDisabled}
+        isSubmitting={isSubmitting}
+        mode={editingRecipe ? "edit" : "create"}
+        onCancel={() => setEditingRecipe(undefined)}
+        onSubmit={handleRecipeSubmit}
+      />
+
+      {!hasBackendConfigured && (
+        <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
+          <Server className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <p>
+            Mostrando recetas mock. Para usar el CRUD real, levanta el backend y define
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:4000 en frontend/.env.local.
+          </p>
+        </div>
+      )}
+
+      {mutationError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          {mutationError}
+        </div>
+      )}
+
+      {recipesQuery.isError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          {getErrorMessage(recipesQuery.error)}
+        </div>
+      )}
+
       <section className="rounded-lg border bg-card p-4 shadow-sm sm:p-5">
         <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-start">
           <div className="space-y-4">
@@ -166,13 +298,31 @@ export function RecipesExplorer({ recipes }: RecipesExplorerProps) {
         </div>
       </section>
 
+      {recipesQuery.isLoading && (
+        <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
+          Cargando recetas...
+        </div>
+      )}
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filteredRecipes.map((recipe) => (
-          <RecipeCard key={recipe.id} recipe={recipe} />
+          <RecipeCard
+            key={recipe.id}
+            canDelete={hasBackendConfigured && isAuthenticated && canDeleteRecipe}
+            canEdit={hasBackendConfigured && isAuthenticated && canUpdateRecipe}
+            isDeleting={
+              deleteRecipeMutation.isPending &&
+              deleteRecipeMutation.variables === recipe.id
+            }
+            recipe={recipe}
+            onDelete={handleDeleteRecipe}
+            onEdit={setEditingRecipe}
+            onRatingChange={handleRatingChange}
+          />
         ))}
       </section>
 
-      {filteredRecipes.length === 0 && (
+      {!recipesQuery.isLoading && filteredRecipes.length === 0 && (
         <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
           No hay recetas que coincidan con los filtros actuales.
         </div>

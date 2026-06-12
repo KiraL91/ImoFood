@@ -36,6 +36,22 @@ model Food {
   @@index([status])
 }
 
+model Recipe {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  ingredients     String[]
+  steps           String[]
+  tags            String[]
+  prepTimeMinutes Int
+  rating          Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([name])
+  @@index([rating])
+}
+
 model AppUser {
   id           String   @id @default(cuid())
   username     String   @unique

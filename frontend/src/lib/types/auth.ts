@@ -1,6 +1,14 @@
 export type UserRole = "owner" | "member" | "readonly";
 
-export type Permission = "foods:read" | "foods:create" | "foods:update" | "foods:delete";
+export type Permission =
+  | "foods:read"
+  | "foods:create"
+  | "foods:update"
+  | "foods:delete"
+  | "recipes:read"
+  | "recipes:create"
+  | "recipes:update"
+  | "recipes:delete";
 
 export type AuthUser = {
   displayName?: string;

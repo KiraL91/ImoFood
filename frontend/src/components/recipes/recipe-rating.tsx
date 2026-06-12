@@ -1,18 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import type { RecipeRatingValue } from "@/lib/types/recipe";
 import { cn } from "@/lib/utils/cn";
 
 type RecipeRatingProps = {
+  isDisabled?: boolean;
   initialRating?: RecipeRatingValue;
+  onChange?: (rating: RecipeRatingValue) => Promise<void> | void;
 };
 
 const ratingValues: RecipeRatingValue[] = [1, 2, 3, 4, 5];
 
-export function RecipeRating({ initialRating }: RecipeRatingProps) {
+export function RecipeRating({
+  initialRating,
+  isDisabled = false,
+  onChange,
+}: RecipeRatingProps) {
   const [rating, setRating] = useState<RecipeRatingValue | undefined>(initialRating);
+
+  useEffect(() => {
+    setRating(initialRating);
+  }, [initialRating]);
+
+  async function handleRatingChange(value: RecipeRatingValue) {
+    if (isDisabled) {
+      return;
+    }
+
+    setRating(value);
+    await onChange?.(value);
+  }
 
   return (
     <div className="space-y-2">
@@ -34,8 +53,9 @@ export function RecipeRating({ initialRating }: RecipeRatingProps) {
               aria-checked={rating === value}
               aria-label={`Puntuar con ${value} estrella${value === 1 ? "" : "s"}`}
               title={`${value}/5`}
-              onClick={() => setRating(value)}
-              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
+              disabled={isDisabled}
+              onClick={() => void handleRatingChange(value)}
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Star
                 className={cn(

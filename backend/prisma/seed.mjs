@@ -943,6 +943,57 @@ const foods = [
   },
 ];
 
+const recipes = [
+  {
+    id: "recipe-001",
+    name: "Bowl de arroz con pollo",
+    description: "Comida base, sencilla y facil de ajustar por tolerancia.",
+    ingredients: [
+      "Arroz blanco cocido",
+      "Pechuga de pollo",
+      "Aceite de oliva",
+      "Sal",
+      "Zanahoria cocida opcional",
+    ],
+    steps: [
+      "Cocer el arroz hasta que quede suelto.",
+      "Dorar el pollo con poco aceite.",
+      "Combinar y ajustar sal al final.",
+    ],
+    tags: ["comida", "base", "sin gluten"],
+    prepTimeMinutes: 25,
+    rating: 5,
+  },
+  {
+    id: "recipe-002",
+    name: "Tortilla suave",
+    description: "Cena rapida con pocos ingredientes y buena saciedad.",
+    ingredients: ["Huevos", "Sal", "Aceite de oliva"],
+    steps: [
+      "Batir los huevos con una pizca de sal.",
+      "Cuajar a fuego medio con poco aceite.",
+      "Servir con arroz o verdura tolerada.",
+    ],
+    tags: ["cena", "rapida", "proteina"],
+    prepTimeMinutes: 10,
+    rating: 4,
+  },
+  {
+    id: "recipe-003",
+    name: "Crema simple de calabacin",
+    description: "Receta en fase de prueba para raciones pequenas.",
+    ingredients: ["Calabacin pelado", "Agua", "Sal", "Aceite de oliva"],
+    steps: [
+      "Cocer el calabacin pelado hasta que este tierno.",
+      "Triturar con parte del agua de coccion.",
+      "Anadir aceite de oliva al servir.",
+    ],
+    tags: ["verdura", "fase prueba", "suave"],
+    prepTimeMinutes: 20,
+    rating: 3,
+  },
+];
+
 if (foods.length !== 100) {
   throw new Error(`Expected 100 seed foods, received ${foods.length}.`);
 }
@@ -968,6 +1019,27 @@ const totalCount = await prisma.food.count();
 
 console.log(
   `Food seed completed. Inserted ${result.count}, seed records ${seededCount}/100, total foods ${totalCount}.`,
+);
+
+const recipeResult = await prisma.recipe.createMany({
+  data: recipes.map((recipe) => ({
+    ...recipe,
+    createdAt: seedTimestamp,
+    updatedAt: seedTimestamp,
+  })),
+  skipDuplicates: true,
+});
+
+const seededRecipesCount = await prisma.recipe.count({
+  where: {
+    id: {
+      in: recipes.map((recipe) => recipe.id),
+    },
+  },
+});
+
+console.log(
+  `Recipe seed completed. Inserted ${recipeResult.count}, seed records ${seededRecipesCount}/${recipes.length}.`,
 );
 
 for (const user of users) {

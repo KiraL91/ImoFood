@@ -1,5 +1,4 @@
 import { RecipesExplorer } from "@/features/recipes/recipes-explorer";
-import { recipes } from "@/lib/mock/recipes";
 
 export default function RecipesPage() {
   return (
@@ -10,7 +9,7 @@ export default function RecipesPage() {
           Preparaciones simples para ajustar ingredientes segun tolerancia.
         </p>
       </section>
-      <RecipesExplorer recipes={recipes} />
+      <RecipesExplorer />
     </div>
   );
 }

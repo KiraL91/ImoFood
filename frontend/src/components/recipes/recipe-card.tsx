@@ -1,6 +1,7 @@
-import { Clock, ListChecks } from "lucide-react";
+import { Clock, ListChecks, Pencil, Trash2 } from "lucide-react";
 import { RecipeRating } from "@/components/recipes/recipe-rating";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,14 +12,60 @@ import {
 import type { Recipe } from "@/lib/types/recipe";
 
 type RecipeCardProps = {
+  canDelete?: boolean;
+  canEdit?: boolean;
+  isDeleting?: boolean;
+  onDelete?: (recipe: Recipe) => void;
+  onEdit?: (recipe: Recipe) => void;
+  onRatingChange?: (
+    recipe: Recipe,
+    rating: NonNullable<Recipe["rating"]>,
+  ) => Promise<void> | void;
   recipe: Recipe;
 };
 
-export function RecipeCard({ recipe }: RecipeCardProps) {
+export function RecipeCard({
+  canDelete = false,
+  canEdit = false,
+  isDeleting = false,
+  onDelete,
+  onEdit,
+  onRatingChange,
+  recipe,
+}: RecipeCardProps) {
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>{recipe.name}</CardTitle>
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle>{recipe.name}</CardTitle>
+          {(canEdit || canDelete) && (
+            <div className="flex shrink-0 gap-1">
+              {canEdit && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  title="Editar receta"
+                  onClick={() => onEdit?.(recipe)}
+                >
+                  <Pencil aria-hidden="true" />
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  title="Borrar receta"
+                  onClick={() => onDelete?.(recipe)}
+                  disabled={isDeleting}
+                >
+                  <Trash2 aria-hidden="true" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
         {recipe.description && <CardDescription>{recipe.description}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4">
@@ -32,7 +79,11 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             {recipe.ingredients.length} ingredientes
           </span>
         </div>
-        <RecipeRating initialRating={recipe.rating} />
+        <RecipeRating
+          initialRating={recipe.rating}
+          isDisabled={!canEdit}
+          onChange={(rating) => onRatingChange?.(recipe, rating)}
+        />
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase text-muted-foreground">
             Ingredientes
