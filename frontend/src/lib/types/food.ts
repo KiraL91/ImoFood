@@ -17,6 +17,7 @@ export const foodSchema = z.object({
   status: foodStatusSchema,
   tolerance: toleranceSchema,
   notes: z.string().optional(),
+  suggestedServing: z.string().optional(),
   tags: z.array(z.string()),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),

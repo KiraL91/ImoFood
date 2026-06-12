@@ -28,6 +28,7 @@ model Food {
   status    FoodStatus
   tolerance Int
   notes     String?
+  suggestedServing String?
   tags      String[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt

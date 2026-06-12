@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Scale, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +69,15 @@ export function FoodCard({
       <CardContent className="space-y-4">
         {food.notes && (
           <p className="text-sm leading-6 text-muted-foreground">{food.notes}</p>
+        )}
+        {food.suggestedServing && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+            <div className="mb-1 flex items-center gap-2 font-medium">
+              <Scale className="size-4 text-muted-foreground" aria-hidden="true" />
+              <span>Racion sugerida</span>
+            </div>
+            <p className="leading-6 text-muted-foreground">{food.suggestedServing}</p>
+          </div>
         )}
         <div>
           <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">

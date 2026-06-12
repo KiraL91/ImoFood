@@ -65,7 +65,7 @@ export function FoodsExplorer() {
       const matchesStatus = status === "all" || food.status === status;
       const matchesQuery =
         normalizedQuery.length === 0 ||
-        [food.name, food.category, food.notes, ...food.tags]
+        [food.name, food.category, food.notes, food.suggestedServing, ...food.tags]
           .join(" ")
           .toLowerCase()
           .includes(normalizedQuery);

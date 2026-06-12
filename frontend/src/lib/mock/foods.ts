@@ -9,6 +9,7 @@ export const foods: Food[] = foodSchema.array().parse([
     status: "allowed",
     tolerance: 5,
     notes: "Base neutra para comidas simples.",
+    suggestedServing: "120 g, equivale a un bol pequeno de arroz cocido.",
     tags: ["bajo residuo", "sin gluten", "base"],
   },
   {
@@ -18,6 +19,7 @@ export const foods: Food[] = foodSchema.array().parse([
     status: "allowed",
     tolerance: 5,
     notes: "Mejor a la plancha, horno o cocida con poca grasa.",
+    suggestedServing: "120 g, equivale a un filete pequeno cocinado.",
     tags: ["proteina", "rapido", "salado"],
   },
   {
@@ -27,6 +29,7 @@ export const foods: Food[] = foodSchema.array().parse([
     status: "testing",
     tolerance: 3,
     notes: "Probar sin piel y en racion pequena.",
+    suggestedServing: "75 g, equivale a medio calabacin pequeno cocido.",
     tags: ["verdura", "fase prueba"],
   },
   {
@@ -36,6 +39,7 @@ export const foods: Food[] = foodSchema.array().parse([
     status: "allowed",
     tolerance: 4,
     notes: "Util para desayunos y cenas rapidas.",
+    suggestedServing: "1 unidad, huevo tamano M.",
     tags: ["proteina", "desayuno"],
   },
   {
@@ -45,6 +49,7 @@ export const foods: Food[] = foodSchema.array().parse([
     status: "caution",
     tolerance: 2,
     notes: "Puede ser pesado; revisar cantidad y momento del dia.",
+    suggestedServing: "30 g, equivale a un cuarto de aguacate de tamano medio.",
     tags: ["grasa", "porcion controlada"],
   },
   {

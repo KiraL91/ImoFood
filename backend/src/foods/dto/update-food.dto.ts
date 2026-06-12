@@ -38,6 +38,10 @@ export class UpdateFoodDto {
   notes?: string;
 
   @IsOptional()
+  @IsString()
+  suggestedServing?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];

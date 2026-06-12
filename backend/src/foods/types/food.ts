@@ -15,6 +15,7 @@ export type Food = {
   status: FoodStatus;
   tolerance: ToleranceScore;
   notes?: string;
+  suggestedServing?: string;
   tags: string[];
   createdAt: string;
   updatedAt: string;

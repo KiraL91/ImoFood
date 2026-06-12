@@ -33,6 +33,10 @@ export class CreateFoodDto {
   @IsString()
   notes?: string;
 
+  @IsOptional()
+  @IsString()
+  suggestedServing?: string;
+
   @IsArray()
   @IsString({ each: true })
   tags!: string[];

@@ -14,6 +14,7 @@ export type CreateFoodInput = {
   status: FoodStatus;
   tolerance: 1 | 2 | 3 | 4 | 5;
   notes?: string;
+  suggestedServing?: string;
   tags: string[];
 };
 

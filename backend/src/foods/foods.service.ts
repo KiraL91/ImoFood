@@ -71,6 +71,12 @@ export class FoodsService {
           },
         },
         {
+          suggestedServing: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
           tags: {
             has: search,
           },
@@ -109,6 +115,7 @@ export class FoodsService {
         name: createFoodDto.name.trim(),
         notes: createFoodDto.notes?.trim(),
         status: foodStatusToPrisma[createFoodDto.status],
+        suggestedServing: createFoodDto.suggestedServing?.trim() || undefined,
         tags: this.normalizeTags(createFoodDto.tags),
         tolerance: createFoodDto.tolerance,
       },
@@ -127,6 +134,10 @@ export class FoodsService {
       status: updateFoodDto.status
         ? foodStatusToPrisma[updateFoodDto.status]
         : undefined,
+      suggestedServing:
+        updateFoodDto.suggestedServing?.trim() === ""
+          ? null
+          : updateFoodDto.suggestedServing?.trim(),
       tags: updateFoodDto.tags
         ? this.normalizeTags(updateFoodDto.tags)
         : undefined,
@@ -175,6 +186,7 @@ export class FoodsService {
       name: food.name,
       notes: food.notes ?? undefined,
       status: food.status,
+      suggestedServing: food.suggestedServing ?? undefined,
       tags: [...food.tags],
       tolerance: food.tolerance as Food["tolerance"],
       updatedAt: food.updatedAt.toISOString(),

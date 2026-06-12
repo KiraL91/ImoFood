@@ -48,6 +48,7 @@ const foods = [
     status: "allowed",
     tolerance: 5,
     notes: "Base neutra para comidas simples.",
+    suggestedServing: "120 g, equivale a un bol pequeno de arroz cocido.",
     tags: ["bajo residuo", "sin gluten", "base"],
   },
   {
@@ -57,6 +58,7 @@ const foods = [
     status: "allowed",
     tolerance: 5,
     notes: "Mejor a la plancha, horno o cocida con poca grasa.",
+    suggestedServing: "120 g, equivale a un filete pequeno cocinado.",
     tags: ["proteina", "rapido", "salado"],
   },
   {
@@ -66,6 +68,7 @@ const foods = [
     status: "testing",
     tolerance: 3,
     notes: "Probar sin piel y en racion pequena.",
+    suggestedServing: "75 g, equivale a medio calabacin pequeno cocido.",
     tags: ["verdura", "fase prueba"],
   },
   {
@@ -75,6 +78,7 @@ const foods = [
     status: "allowed",
     tolerance: 4,
     notes: "Util para desayunos y cenas rapidas.",
+    suggestedServing: "1 unidad, huevo tamano M.",
     tags: ["proteina", "desayuno"],
   },
   {
@@ -84,6 +88,7 @@ const foods = [
     status: "caution",
     tolerance: 2,
     notes: "Puede ser pesado; revisar cantidad y momento del dia.",
+    suggestedServing: "30 g, equivale a un cuarto de aguacate de tamano medio.",
     tags: ["grasa", "porcion controlada"],
   },
   {
@@ -943,6 +948,124 @@ const foods = [
   },
 ];
 
+const suggestedServings = {
+  "food-001": "120 g, equivale a un bol pequeno de arroz cocido.",
+  "food-002": "120 g, equivale a un filete pequeno cocinado.",
+  "food-003": "75 g, equivale a medio calabacin pequeno cocido.",
+  "food-004": "1 unidad, huevo tamano M.",
+  "food-005": "30 g, equivale a un cuarto de aguacate de tamano medio.",
+  "food-006":
+    "0 g, evitar en fase restrictiva; si se reintroduce, empezar con una cantidad minima cocinada.",
+  "food-007": "125 g, equivale a un yogur individual pequeno.",
+  "food-008": "80 g, equivale a medio platano pequeno poco maduro.",
+  "food-009": "150 g, equivale a una patata mediana cocida.",
+  "food-010": "70 g, equivale a medio boniato pequeno asado.",
+  "food-011": "90 g, equivale a medio vaso de quinoa cocida.",
+  "food-012": "40 g, equivale a unas 4 cucharadas de copos secos.",
+  "food-013": "40 g, equivale a dos rebanadas pequenas.",
+  "food-014":
+    "0 g, evitar en fase restrictiva; reintroducir solo con media rebanada pequena.",
+  "food-015": "75 g, equivale a un plato pequeno de pasta cocida.",
+  "food-016": "60 g, equivale a una racion pequena de pasta cocida.",
+  "food-017": "60 g, equivale a media taza de maiz cocido.",
+  "food-018": "2 unidades, equivale a dos tortitas de arroz simples.",
+  "food-019": "30 g, equivale a 4 o 5 galletas pequenas de arroz.",
+  "food-020": "120 g, equivale a un filete pequeno de ternera magra.",
+  "food-021": "120 g, equivale a un filete pequeno de pavo cocinado.",
+  "food-022": "120 g, equivale a un corte pequeno de lomo magro.",
+  "food-023": "150 g, equivale a un filete mediano de merluza.",
+  "food-024": "120 g, equivale a un lomo pequeno de salmon.",
+  "food-025": "80 g, equivale a una lata pequena escurrida.",
+  "food-026": "60 g, equivale a dos sardinas pequenas.",
+  "food-027": "120 g, equivale a una porcion pequena de bacalao desalado.",
+  "food-028": "100 g, equivale a 8 o 10 gambas medianas.",
+  "food-029": "80 g, equivale a media pieza pequena de tofu firme.",
+  "food-030": "60 g, equivale a 2 o 3 lonchas de jamon cocido.",
+  "food-031": "30 g, equivale a 2 lonchas finas de jamon serrano.",
+  "food-032": "30 g, equivale a un dado pequeno de queso curado.",
+  "food-033": "100 g, equivale a las claras de 3 huevos medianos.",
+  "food-034": "80 g, equivale a una zanahoria mediana cocida.",
+  "food-035": "60 g, equivale a medio pepino pequeno sin piel.",
+  "food-036": "40 g, equivale a un bol pequeno de hojas de lechuga.",
+  "food-037": "60 g, equivale a un punado grande de espinaca cocida.",
+  "food-038": "70 g, equivale a media taza de acelga cocida.",
+  "food-039": "60 g, equivale a medio pimiento rojo pequeno cocinado.",
+  "food-040": "50 g, equivale a medio pimiento verde pequeno cocinado.",
+  "food-041": "80 g, equivale a un tomate pequeno.",
+  "food-042": "75 g, equivale a media berenjena pequena cocinada.",
+  "food-043": "60 g, equivale a un punado pequeno de judias verdes cocidas.",
+  "food-044": "75 g, equivale a media taza de calabaza cocida en dados.",
+  "food-045":
+    "0 g, evitar en fase restrictiva; reintroducir solo en cantidad minima.",
+  "food-046": "40 g, equivale a 2 o 3 arbolitos pequenos de brocoli cocido.",
+  "food-047":
+    "0 g, evitar en fase restrictiva; reintroducir solo con una cantidad minima.",
+  "food-048":
+    "0 g, evitar en fase restrictiva; reintroducir solo con una cantidad minima.",
+  "food-049": "0 g, evitar en fase restrictiva; especialmente la parte blanca.",
+  "food-050":
+    "0 g, evitar como ingrediente; usar aceite infusionado si se busca sabor.",
+  "food-051":
+    "0 g, evitar en fase restrictiva; reintroducir solo si hay estabilidad.",
+  "food-052": "40 g, equivale a 2 o 3 rodajas pequenas de remolacha cocida.",
+  "food-053": "30 g, equivale a un punado pequeno de rucula.",
+  "food-054": "20 g, equivale a un tallo pequeno de apio.",
+  "food-055": "60 g, equivale a media taza de nabo cocido.",
+  "food-056": "1 unidad, kiwi pequeno.",
+  "food-057": "1 unidad, naranja pequena.",
+  "food-058": "1 unidad, mandarina pequena.",
+  "food-059": "80 g, equivale a un punado de fresas.",
+  "food-060": "40 g, equivale a un punado pequeno de arandanos.",
+  "food-061": "50 g, equivale a 8 o 10 uvas.",
+  "food-062":
+    "0 g, evitar en fase restrictiva; reintroducir solo con un trozo pequeno.",
+  "food-063":
+    "0 g, evitar en fase restrictiva; reintroducir solo con un trozo pequeno.",
+  "food-064":
+    "0 g, evitar en fase restrictiva; reintroducir solo con un trozo pequeno.",
+  "food-065":
+    "0 g, evitar en fase restrictiva; reintroducir solo con un trozo pequeno.",
+  "food-066": "80 g, equivale a una tajada pequena de melon.",
+  "food-067": "0 g, evitar en fase restrictiva por volumen y azucares.",
+  "food-068": "10 g, equivale a una cucharada de zumo de limon como aderezo.",
+  "food-069": "100 g, equivale a media taza de papaya en dados.",
+  "food-070": "80 g, equivale a media taza de pina en dados.",
+  "food-071": "200 ml, equivale a un vaso pequeno de leche sin lactosa.",
+  "food-072": "200 ml, equivale a un vaso pequeno de bebida de almendra.",
+  "food-073": "200 ml, equivale a un vaso pequeno de bebida de arroz.",
+  "food-074": "125 g, equivale a un vaso individual pequeno de kefir.",
+  "food-075": "60 g, equivale a medio envase pequeno de queso fresco.",
+  "food-076": "50 g, equivale a media bola pequena de mozzarella.",
+  "food-077": "125 g, equivale a un yogur individual pequeno.",
+  "food-078": "10 g, equivale a una cucharadita colmada de mantequilla.",
+  "food-079": "10 ml, equivale a una cucharada rasa de aceite de oliva.",
+  "food-080": "30 g, equivale a 6 u 8 aceitunas.",
+  "food-081": "15 g, equivale a 10 o 12 almendras.",
+  "food-082": "20 g, equivale a 4 medias nueces.",
+  "food-083": "15 g, equivale a un punado pequeno de cacahuetes.",
+  "food-084": "5 g, equivale a una cucharadita de semillas de chia.",
+  "food-085": "15 g, equivale a una cucharada de semillas de calabaza.",
+  "food-086": "10 g, equivale a una cucharadita colmada de tahini.",
+  "food-087":
+    "0 g, evitar en fase restrictiva; reintroducir solo con 1 o 2 cucharadas.",
+  "food-088":
+    "0 g, evitar en fase restrictiva; reintroducir solo con 1 o 2 cucharadas.",
+  "food-089":
+    "0 g, evitar en fase restrictiva; reintroducir solo con 1 o 2 cucharadas.",
+  "food-090": "30 g, equivale a 2 cucharadas de guisantes cocidos.",
+  "food-091":
+    "0 g, evitar en fase restrictiva; si se prueba, empezar con una cucharadita.",
+  "food-092": "40 g, equivale a un punado pequeno de edamame.",
+  "food-093": "250 ml, equivale a un vaso de agua.",
+  "food-094": "100 ml, equivale a una taza pequena de cafe.",
+  "food-095": "200 ml, equivale a una taza de te verde suave.",
+  "food-096": "200 ml, equivale a una taza de infusion de menta.",
+  "food-097": "200 ml, equivale a una taza de caldo casero.",
+  "food-098": "30 g, equivale a 2 cucharadas de salsa de tomate.",
+  "food-099": "10 g, equivale a 1 o 2 onzas pequenas de chocolate negro.",
+  "food-100": "5 g, equivale a una cucharadita rasa de azucar blanco.",
+};
+
 const recipes = [
   {
     id: "recipe-001",
@@ -998,11 +1121,28 @@ if (foods.length !== 100) {
   throw new Error(`Expected 100 seed foods, received ${foods.length}.`);
 }
 
+const foodsWithoutSuggestedServing = foods.filter(
+  (food) => !food.suggestedServing && !suggestedServings[food.id],
+);
+
+if (foodsWithoutSuggestedServing.length > 0) {
+  throw new Error(
+    `Missing suggested serving for foods: ${foodsWithoutSuggestedServing
+      .map((food) => food.id)
+      .join(", ")}.`,
+  );
+}
+
+function getSuggestedServing(food) {
+  return food.suggestedServing ?? suggestedServings[food.id];
+}
+
 const seedFoodIds = foods.map((food) => food.id);
 const result = await prisma.food.createMany({
   data: foods.map((food) => ({
     ...food,
     createdAt: seedTimestamp,
+    suggestedServing: getSuggestedServing(food),
     updatedAt: seedTimestamp,
   })),
   skipDuplicates: true,
@@ -1020,6 +1160,17 @@ const totalCount = await prisma.food.count();
 console.log(
   `Food seed completed. Inserted ${result.count}, seed records ${seededCount}/100, total foods ${totalCount}.`,
 );
+
+for (const food of foods) {
+  await prisma.food.update({
+    data: {
+      suggestedServing: getSuggestedServing(food),
+    },
+    where: {
+      id: food.id,
+    },
+  });
+}
 
 const recipeResult = await prisma.recipe.createMany({
   data: recipes.map((recipe) => ({

@@ -19,6 +19,7 @@ type FoodFormState = {
   name: string;
   notes: string;
   status: FoodStatus;
+  suggestedServing: string;
   tags: string;
   tolerance: "1" | "2" | "3" | "4" | "5";
 };
@@ -38,6 +39,7 @@ const emptyFormState: FoodFormState = {
   name: "",
   notes: "",
   status: "allowed",
+  suggestedServing: "",
   tags: "",
   tolerance: "5",
 };
@@ -52,6 +54,7 @@ function toFormState(food?: Food): FoodFormState {
     name: food.name,
     notes: food.notes ?? "",
     status: food.status,
+    suggestedServing: food.suggestedServing ?? "",
     tags: food.tags.join(", "),
     tolerance: String(food.tolerance) as FoodFormState["tolerance"],
   };
@@ -63,6 +66,7 @@ function toFoodInput(formState: FoodFormState): CreateFoodInput {
     name: formState.name.trim(),
     notes: formState.notes.trim() || undefined,
     status: formState.status,
+    suggestedServing: formState.suggestedServing.trim(),
     tags: formState.tags
       .split(",")
       .map((tag) => tag.trim())
@@ -203,6 +207,21 @@ export function NewFoodDraftCard({
                 setFormState((current) => ({ ...current, tags: event.target.value }))
               }
               placeholder="base, rapido, sin gluten"
+              disabled={disabled}
+            />
+          </label>
+
+          <label className="space-y-2 text-sm font-medium md:col-span-2">
+            Racion sugerida
+            <Input
+              value={formState.suggestedServing}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  suggestedServing: event.target.value,
+                }))
+              }
+              placeholder="Ej. 50 g, equivale a medio aguacate de tamano medio"
               disabled={disabled}
             />
           </label>
