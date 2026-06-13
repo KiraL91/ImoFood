@@ -9,7 +9,10 @@ import {
   type ReactNode,
 } from "react";
 import {
+  authSessionExpiredEvent,
   clearStoredAuthSession,
+  expireStoredAuthSession,
+  getAccessTokenExpiration,
   getStoredAuthSession,
   storeAuthSession,
 } from "@/features/auth/auth-storage";
@@ -37,9 +40,45 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    function handleAuthSessionExpired() {
+      clearStoredAuthSession();
+      setSession(null);
+    }
+
+    window.addEventListener(authSessionExpiredEvent, handleAuthSessionExpired);
     setSession(getStoredAuthSession());
     setIsLoading(false);
+
+    return () => {
+      window.removeEventListener(authSessionExpiredEvent, handleAuthSessionExpired);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    const expiration = getAccessTokenExpiration(session.accessToken);
+
+    if (!expiration) {
+      expireStoredAuthSession();
+      return;
+    }
+
+    const delay = expiration * 1000 - Date.now();
+
+    if (delay <= 0) {
+      expireStoredAuthSession();
+      return;
+    }
+
+    const timeoutId = window.setTimeout(expireStoredAuthSession, delay);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [session]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

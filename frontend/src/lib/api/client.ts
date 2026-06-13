@@ -1,5 +1,8 @@
 import { env } from "@/lib/env";
-import { getStoredAccessToken } from "@/features/auth/auth-storage";
+import {
+  expireStoredAuthSession,
+  getStoredAccessToken,
+} from "@/features/auth/auth-storage";
 
 type ApiClientOptions = RequestInit;
 
@@ -24,6 +27,10 @@ export async function apiClient<TResponse>(
     ...options,
     headers,
   });
+
+  if (response.status === 401 && accessToken) {
+    expireStoredAuthSession();
+  }
 
   if (!response.ok) {
     let message = `API request failed with status ${response.status}`;
