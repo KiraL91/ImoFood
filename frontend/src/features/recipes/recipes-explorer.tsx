@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Server, Star, X } from "lucide-react";
-import { RecipeDraftCard } from "@/components/recipes/recipe-draft-card";
+import { Plus, Search, Server, Star, X } from "lucide-react";
 import { RecipeCard } from "@/components/recipes/recipe-card";
+import { RecipeFormDialog } from "@/components/recipes/recipe-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { CreateRecipeInput } from "@/features/recipes/recipes-api";
@@ -42,6 +42,7 @@ export function RecipesExplorer() {
   const [minRating, setMinRating] = useState<MinRatingFilter>(0);
   const [selectedIngredient, setSelectedIngredient] = useState<string | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | undefined>();
+  const [isRecipeDialogOpen, setIsRecipeDialogOpen] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
@@ -61,6 +62,7 @@ export function RecipesExplorer() {
     !hasBackendConfigured ||
     !isAuthenticated ||
     (editingRecipe ? !canUpdateRecipe : !canCreateRecipe);
+  const canOpenCreateDialog = hasBackendConfigured && isAuthenticated && canCreateRecipe;
   const disabledReason = !hasBackendConfigured
     ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar recetas contra el backend."
     : !isAuthenticated
@@ -125,10 +127,12 @@ export function RecipesExplorer() {
           input,
         });
         setEditingRecipe(undefined);
+        setIsRecipeDialogOpen(false);
         return;
       }
 
       await createRecipeMutation.mutateAsync(input);
+      setIsRecipeDialogOpen(false);
     } catch (error) {
       setMutationError(getErrorMessage(error));
     }
@@ -176,15 +180,42 @@ export function RecipesExplorer() {
     }
   }
 
+  function handleOpenCreateRecipeDialog() {
+    setMutationError(null);
+    setEditingRecipe(undefined);
+    setIsRecipeDialogOpen(true);
+  }
+
+  function handleOpenEditRecipeDialog(recipe: Recipe) {
+    setMutationError(null);
+    setEditingRecipe(recipe);
+    setIsRecipeDialogOpen(true);
+  }
+
+  function handleRecipeDialogOpenChange(open: boolean) {
+    setIsRecipeDialogOpen(open);
+
+    if (!open) {
+      setEditingRecipe(undefined);
+      setMutationError(null);
+    }
+  }
+
   return (
     <div className="space-y-5">
-      <RecipeDraftCard
+      <RecipeFormDialog
         disabledReason={disabledReason}
+        errorMessage={mutationError}
         initialRecipe={editingRecipe}
         isDisabled={isFormDisabled}
+        isOpen={isRecipeDialogOpen}
         isSubmitting={isSubmitting}
         mode={editingRecipe ? "edit" : "create"}
-        onCancel={() => setEditingRecipe(undefined)}
+        onCancel={() => {
+          setEditingRecipe(undefined);
+          setMutationError(null);
+        }}
+        onOpenChange={handleRecipeDialogOpenChange}
         onSubmit={handleRecipeSubmit}
       />
 
@@ -198,7 +229,7 @@ export function RecipesExplorer() {
         </div>
       )}
 
-      {mutationError && (
+      {mutationError && !isRecipeDialogOpen && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {mutationError}
         </div>
@@ -256,6 +287,17 @@ export function RecipesExplorer() {
           </div>
 
           <div className="space-y-3">
+            <Button
+              type="button"
+              className="w-full"
+              disabled={!canOpenCreateDialog}
+              title={canOpenCreateDialog ? "Anadir receta" : disabledReason}
+              onClick={handleOpenCreateRecipeDialog}
+            >
+              <Plus aria-hidden="true" />
+              Anadir receta
+            </Button>
+
             <div>
               <p className="mb-2 text-xs font-medium uppercase text-muted-foreground">
                 Estrellas minimas
@@ -316,7 +358,7 @@ export function RecipesExplorer() {
             }
             recipe={recipe}
             onDelete={handleDeleteRecipe}
-            onEdit={setEditingRecipe}
+            onEdit={handleOpenEditRecipeDialog}
             onRatingChange={handleRatingChange}
           />
         ))}
@@ -327,6 +369,18 @@ export function RecipesExplorer() {
           No hay recetas que coincidan con los filtros actuales.
         </div>
       )}
+
+      <Button
+        type="button"
+        size="icon"
+        className="fixed bottom-24 right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
+        disabled={!canOpenCreateDialog}
+        title={canOpenCreateDialog ? "Anadir receta" : disabledReason}
+        aria-label="Anadir receta"
+        onClick={handleOpenCreateRecipeDialog}
+      >
+        <Plus aria-hidden="true" />
+      </Button>
     </div>
   );
 }
