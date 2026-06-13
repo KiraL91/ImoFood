@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Server } from "lucide-react";
+import { Plus, Search, Server } from "lucide-react";
 import { FoodCard } from "@/components/foods/food-card";
-import { NewFoodDraftCard } from "@/components/foods/new-food-draft-card";
+import { FoodFormDialog } from "@/components/foods/food-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { CreateFoodInput } from "@/features/foods/foods-api";
@@ -30,6 +30,7 @@ function getErrorMessage(error: unknown) {
 export function FoodsExplorer() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<FilterValue>("all");
+  const [isFoodDialogOpen, setIsFoodDialogOpen] = useState(false);
   const [editingFood, setEditingFood] = useState<Food | undefined>();
   const [mutationError, setMutationError] = useState<string | null>(null);
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
@@ -50,6 +51,7 @@ export function FoodsExplorer() {
     !hasBackendConfigured ||
     !isAuthenticated ||
     (editingFood ? !canUpdateFood : !canCreateFood);
+  const canOpenCreateDialog = hasBackendConfigured && isAuthenticated && canCreateFood;
   const disabledReason = !hasBackendConfigured
     ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend."
     : !isAuthenticated
@@ -84,12 +86,35 @@ export function FoodsExplorer() {
           input,
         });
         setEditingFood(undefined);
+        setIsFoodDialogOpen(false);
         return;
       }
 
       await createFoodMutation.mutateAsync(input);
+      setIsFoodDialogOpen(false);
     } catch (error) {
       setMutationError(getErrorMessage(error));
+    }
+  }
+
+  function handleOpenCreateFoodDialog() {
+    setMutationError(null);
+    setEditingFood(undefined);
+    setIsFoodDialogOpen(true);
+  }
+
+  function handleOpenEditFoodDialog(food: Food) {
+    setMutationError(null);
+    setEditingFood(food);
+    setIsFoodDialogOpen(true);
+  }
+
+  function handleFoodDialogOpenChange(open: boolean) {
+    setIsFoodDialogOpen(open);
+
+    if (!open) {
+      setEditingFood(undefined);
+      setMutationError(null);
     }
   }
 
@@ -115,13 +140,19 @@ export function FoodsExplorer() {
 
   return (
     <div className="space-y-5">
-      <NewFoodDraftCard
+      <FoodFormDialog
         disabledReason={disabledReason}
+        errorMessage={mutationError}
         initialFood={editingFood}
         isDisabled={isFormDisabled}
+        isOpen={isFoodDialogOpen}
         isSubmitting={isSubmitting}
         mode={editingFood ? "edit" : "create"}
-        onCancel={() => setEditingFood(undefined)}
+        onCancel={() => {
+          setEditingFood(undefined);
+          setMutationError(null);
+        }}
+        onOpenChange={handleFoodDialogOpenChange}
         onSubmit={handleFoodSubmit}
       />
 
@@ -145,7 +176,7 @@ export function FoodsExplorer() {
         </div>
       )}
 
-      {mutationError && (
+      {mutationError && !isFoodDialogOpen && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {mutationError}
         </div>
@@ -158,49 +189,62 @@ export function FoodsExplorer() {
       )}
 
       <section className="rounded-lg border bg-card p-4 shadow-sm sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-          <label className="relative block">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar alimento, categoria o etiqueta"
-              className="pl-9"
-              aria-label="Buscar alimentos"
-            />
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={status === "all" ? "default" : "outline"}
-              onClick={() => setStatus("all")}
-            >
-              Todos
-            </Button>
-            {foodStatusOrder.map((foodStatus) => {
-              const meta = foodStatusMeta[foodStatus];
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+          <div className="space-y-4">
+            <label className="relative block">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar alimento, categoria o etiqueta"
+                className="pl-9"
+                aria-label="Buscar alimentos"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={status === "all" ? "default" : "outline"}
+                onClick={() => setStatus("all")}
+              >
+                Todos
+              </Button>
+              {foodStatusOrder.map((foodStatus) => {
+                const meta = foodStatusMeta[foodStatus];
 
-              return (
-                <Button
-                  key={foodStatus}
-                  type="button"
-                  size="sm"
-                  variant={status === foodStatus ? "default" : "outline"}
-                  onClick={() => setStatus(foodStatus)}
-                >
-                  <span
-                    className={cn("size-2 rounded-full", meta.dotClassName)}
-                    aria-hidden="true"
-                  />
-                  {meta.label}
-                </Button>
-              );
-            })}
+                return (
+                  <Button
+                    key={foodStatus}
+                    type="button"
+                    size="sm"
+                    variant={status === foodStatus ? "default" : "outline"}
+                    onClick={() => setStatus(foodStatus)}
+                  >
+                    <span
+                      className={cn("size-2 rounded-full", meta.dotClassName)}
+                      aria-hidden="true"
+                    />
+                    {meta.label}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
+
+          <Button
+            type="button"
+            className="w-full xl:w-auto"
+            disabled={!canOpenCreateDialog}
+            title={canOpenCreateDialog ? "Anadir alimento" : disabledReason}
+            onClick={handleOpenCreateFoodDialog}
+          >
+            <Plus aria-hidden="true" />
+            Anadir alimento
+          </Button>
         </div>
       </section>
 
@@ -221,7 +265,7 @@ export function FoodsExplorer() {
               deleteFoodMutation.isPending && deleteFoodMutation.variables === food.id
             }
             onDelete={handleDeleteFood}
-            onEdit={setEditingFood}
+            onEdit={handleOpenEditFoodDialog}
           />
         ))}
       </section>
@@ -231,6 +275,18 @@ export function FoodsExplorer() {
           No hay alimentos que coincidan con el filtro actual.
         </div>
       )}
+
+      <Button
+        type="button"
+        size="icon"
+        className="fixed bottom-24 right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
+        disabled={!canOpenCreateDialog}
+        title={canOpenCreateDialog ? "Anadir alimento" : disabledReason}
+        aria-label="Anadir alimento"
+        onClick={handleOpenCreateFoodDialog}
+      >
+        <Plus aria-hidden="true" />
+      </Button>
     </div>
   );
 }
