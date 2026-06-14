@@ -6,12 +6,31 @@ import type { CreateSymptomLogDto } from "./dto/create-symptom-log.dto";
 import type { UpdateSymptomLogDto } from "./dto/update-symptom-log.dto";
 import type { SymptomLog } from "./types/symptom-log";
 
+const symptomLogInclude = {
+  mealLog: {
+    select: {
+      consumedAt: true,
+      description: true,
+      id: true,
+    },
+  },
+} satisfies Prisma.SymptomLogInclude;
+
+type PrismaSymptomLogWithMealLog = PrismaSymptomLog & {
+  mealLog?: {
+    consumedAt: Date;
+    description: string;
+    id: string;
+  } | null;
+};
+
 @Injectable()
 export class SymptomLogsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(): Promise<SymptomLog[]> {
     const symptomLogs = await this.prisma.symptomLog.findMany({
+      include: symptomLogInclude,
       orderBy: {
         loggedAt: "desc",
       },
@@ -22,6 +41,7 @@ export class SymptomLogsService {
 
   async findOne(id: string): Promise<SymptomLog> {
     const symptomLog = await this.prisma.symptomLog.findUnique({
+      include: symptomLogInclude,
       where: {
         id,
       },
@@ -35,17 +55,31 @@ export class SymptomLogsService {
   }
 
   async create(createSymptomLogDto: CreateSymptomLogDto): Promise<SymptomLog> {
+    const mealLogId = this.normalizeMealLogId(createSymptomLogDto.mealLogId);
+
+    if (mealLogId) {
+      await this.ensureMealLogExists(mealLogId);
+    }
+
     const symptomLog = await this.prisma.symptomLog.create({
       data: {
         bloating: createSymptomLogDto.bloating,
         energy: createSymptomLogDto.energy,
         gas: createSymptomLogDto.gas,
         loggedAt: new Date(createSymptomLogDto.loggedAt),
+        mealLog: mealLogId
+          ? {
+              connect: {
+                id: mealLogId,
+              },
+            }
+          : undefined,
         notes: createSymptomLogDto.notes?.trim() || undefined,
         pain: createSymptomLogDto.pain,
         sleep: createSymptomLogDto.sleep,
         transit: createSymptomLogDto.transit,
       },
+      include: symptomLogInclude,
     });
 
     return this.toSymptomLog(symptomLog);
@@ -57,6 +91,12 @@ export class SymptomLogsService {
   ): Promise<SymptomLog> {
     await this.findOne(id);
 
+    const mealLogId = this.normalizeMealLogId(updateSymptomLogDto.mealLogId);
+
+    if (mealLogId) {
+      await this.ensureMealLogExists(mealLogId);
+    }
+
     const data: Prisma.SymptomLogUpdateInput = {
       bloating: updateSymptomLogDto.bloating,
       energy: updateSymptomLogDto.energy,
@@ -64,6 +104,18 @@ export class SymptomLogsService {
       loggedAt: updateSymptomLogDto.loggedAt
         ? new Date(updateSymptomLogDto.loggedAt)
         : undefined,
+      mealLog:
+        mealLogId === undefined
+          ? undefined
+          : mealLogId
+            ? {
+                connect: {
+                  id: mealLogId,
+                },
+              }
+            : {
+                disconnect: true,
+              },
       notes: this.normalizeOptionalNotes(updateSymptomLogDto.notes),
       pain: updateSymptomLogDto.pain,
       sleep: updateSymptomLogDto.sleep,
@@ -72,6 +124,7 @@ export class SymptomLogsService {
 
     const updatedSymptomLog = await this.prisma.symptomLog.update({
       data,
+      include: symptomLogInclude,
       where: {
         id,
       },
@@ -102,7 +155,38 @@ export class SymptomLogsService {
     return trimmedNotes && trimmedNotes.length > 0 ? trimmedNotes : null;
   }
 
-  private toSymptomLog(symptomLog: PrismaSymptomLog): SymptomLog {
+  private normalizeMealLogId(
+    mealLogId?: string | null,
+  ): string | null | undefined {
+    if (mealLogId === undefined) {
+      return undefined;
+    }
+
+    const normalizedMealLogId = mealLogId?.trim();
+
+    return normalizedMealLogId && normalizedMealLogId.length > 0
+      ? normalizedMealLogId
+      : null;
+  }
+
+  private async ensureMealLogExists(mealLogId: string): Promise<void> {
+    const mealLog = await this.prisma.mealLog.findUnique({
+      select: {
+        id: true,
+      },
+      where: {
+        id: mealLogId,
+      },
+    });
+
+    if (!mealLog) {
+      throw new NotFoundException(
+        `Meal log with id "${mealLogId}" was not found.`,
+      );
+    }
+  }
+
+  private toSymptomLog(symptomLog: PrismaSymptomLogWithMealLog): SymptomLog {
     return {
       bloating: symptomLog.bloating,
       createdAt: symptomLog.createdAt.toISOString(),
@@ -110,6 +194,14 @@ export class SymptomLogsService {
       gas: symptomLog.gas,
       id: symptomLog.id,
       loggedAt: symptomLog.loggedAt.toISOString(),
+      mealLog: symptomLog.mealLog
+        ? {
+            consumedAt: symptomLog.mealLog.consumedAt.toISOString(),
+            description: symptomLog.mealLog.description,
+            id: symptomLog.mealLog.id,
+          }
+        : undefined,
+      mealLogId: symptomLog.mealLogId ?? undefined,
       notes: symptomLog.notes ?? undefined,
       pain: symptomLog.pain,
       sleep: symptomLog.sleep,

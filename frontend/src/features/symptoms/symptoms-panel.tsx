@@ -19,6 +19,7 @@ import {
   useSymptomLogs,
   useUpdateSymptomLog,
 } from "@/features/symptoms/symptom-logs-queries";
+import { useMealLogs } from "@/features/meal-logs/meal-logs-queries";
 import { env } from "@/lib/env";
 import type { SymptomLog } from "@/lib/types/symptom-log";
 import { formatDateTime } from "@/lib/utils/format-date";
@@ -55,12 +56,17 @@ export function SymptomsPanel() {
   const canUpdateSymptomLog = hasPermission("symptom-logs:update");
   const canDeleteSymptomLog = hasPermission("symptom-logs:delete");
   const symptomLogsQuery = useSymptomLogs();
+  const mealLogsQuery = useMealLogs();
   const createSymptomLogMutation = useCreateSymptomLog();
   const updateSymptomLogMutation = useUpdateSymptomLog();
   const deleteSymptomLogMutation = useDeleteSymptomLog();
   const symptomLogs = useMemo(
     () => (hasBackendConfigured && !isAuthenticated ? [] : (symptomLogsQuery.data ?? [])),
     [hasBackendConfigured, isAuthenticated, symptomLogsQuery.data],
+  );
+  const mealLogs = useMemo(
+    () => (hasBackendConfigured && !isAuthenticated ? [] : (mealLogsQuery.data ?? [])),
+    [hasBackendConfigured, isAuthenticated, mealLogsQuery.data],
   );
   const latestSymptomLog = symptomLogs[0];
   const isSubmitting =
@@ -150,8 +156,10 @@ export function SymptomsPanel() {
         errorMessage={mutationError}
         initialSymptomLog={editingSymptomLog}
         isDisabled={isFormDisabled}
+        isMealLogsLoading={mealLogsQuery.isLoading}
         isOpen={isSymptomLogDialogOpen}
         isSubmitting={isSubmitting}
+        mealLogs={mealLogs}
         mode={editingSymptomLog ? "edit" : "create"}
         onCancel={() => {
           setEditingSymptomLog(undefined);
@@ -198,7 +206,7 @@ export function SymptomsPanel() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Proxima fase</CardTitle>
+            <CardTitle>Relacion activa</CardTitle>
             <CardDescription>
               Correlacion entre comidas, recetas y sintomas.
             </CardDescription>
@@ -206,8 +214,8 @@ export function SymptomsPanel() {
           <CardContent>
             <div className="rounded-lg border bg-secondary p-4 text-sm leading-6 text-secondary-foreground">
               <CalendarClock className="mb-3 size-5" aria-hidden="true" />
-              CRUD de sintomas listo. La relacion con historial queda pendiente para una
-              iteracion separada.
+              Cada entrada de sintomas puede asociarse a una comida del historial para
+              revisar patrones despues.
             </div>
           </CardContent>
         </Card>
@@ -239,6 +247,13 @@ export function SymptomsPanel() {
       {symptomLogsQuery.isError && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {getErrorMessage(symptomLogsQuery.error)}
+        </div>
+      )}
+
+      {mealLogsQuery.isError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          No se ha podido cargar el historial para relacionar comidas:{" "}
+          {getErrorMessage(mealLogsQuery.error)}
         </div>
       )}
 

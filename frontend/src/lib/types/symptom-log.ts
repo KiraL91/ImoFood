@@ -12,6 +12,14 @@ export const symptomLogSchema = z.object({
   energy: symptomScoreSchema,
   sleep: symptomScoreSchema,
   notes: z.string().optional(),
+  mealLogId: z.string().optional(),
+  mealLog: z
+    .object({
+      id: z.string(),
+      consumedAt: z.string(),
+      description: z.string(),
+    })
+    .optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });

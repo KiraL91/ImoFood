@@ -1,4 +1,4 @@
-import { Activity, CalendarClock, Pencil, Trash2 } from "lucide-react";
+import { Activity, CalendarClock, Pencil, Trash2, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -86,6 +86,18 @@ export function SymptomLogCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {symptomLog.mealLog && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <Utensils className="size-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">{symptomLog.mealLog.description}</span>
+            </div>
+            <p className="mt-1 pl-5 text-xs">
+              {formatDateTime(symptomLog.mealLog.consumedAt)}
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2">
           {Object.entries(signalLabels).map(([key, label]) => (
             <div key={key} className="rounded-md border bg-muted px-3 py-2">

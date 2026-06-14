@@ -44,4 +44,8 @@ export class CreateSymptomLogDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  mealLogId?: string;
 }

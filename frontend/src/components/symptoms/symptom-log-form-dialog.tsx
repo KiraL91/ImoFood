@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { CreateSymptomLogInput } from "@/features/symptoms/symptom-logs-api";
+import type { MealLog } from "@/lib/types/meal-log";
 import type { SymptomLog } from "@/lib/types/symptom-log";
+import { formatDateTime } from "@/lib/utils/format-date";
 
 type SymptomLogFormState = {
   loggedAt: string;
@@ -17,6 +19,7 @@ type SymptomLogFormState = {
   energy: number;
   sleep: number;
   notes: string;
+  mealLogId: string;
 };
 
 type SymptomLogFormDialogProps = {
@@ -24,8 +27,10 @@ type SymptomLogFormDialogProps = {
   errorMessage?: string | null;
   initialSymptomLog?: SymptomLog;
   isDisabled?: boolean;
+  isMealLogsLoading?: boolean;
   isOpen: boolean;
   isSubmitting?: boolean;
+  mealLogs?: MealLog[];
   mode?: "create" | "edit";
   onCancel?: () => void;
   onOpenChange: (open: boolean) => void;
@@ -69,6 +74,7 @@ function getEmptyFormState(): SymptomLogFormState {
     energy: 7,
     sleep: 6,
     notes: "",
+    mealLogId: "",
   };
 }
 
@@ -86,6 +92,7 @@ function toFormState(symptomLog?: SymptomLog): SymptomLogFormState {
     energy: symptomLog.energy,
     sleep: symptomLog.sleep,
     notes: symptomLog.notes ?? "",
+    mealLogId: symptomLog.mealLogId ?? "",
   };
 }
 
@@ -98,6 +105,7 @@ function toSymptomLogInput(
     energy: formState.energy,
     gas: formState.gas,
     loggedAt: new Date(formState.loggedAt).toISOString(),
+    mealLogId: formState.mealLogId || (isEditing ? null : undefined),
     notes: formState.notes.trim() || (isEditing ? null : undefined),
     pain: formState.pain,
     sleep: formState.sleep,
@@ -110,8 +118,10 @@ export function SymptomLogFormDialog({
   errorMessage,
   initialSymptomLog,
   isDisabled = false,
+  isMealLogsLoading = false,
   isOpen,
   isSubmitting = false,
+  mealLogs = [],
   mode = "create",
   onCancel,
   onOpenChange,
@@ -163,7 +173,7 @@ export function SymptomLogFormDialog({
           </div>
         )}
 
-        <label className="space-y-2 text-sm font-medium md:col-span-2">
+        <label className="space-y-2 text-sm font-medium">
           Fecha/hora
           <Input
             value={formState.loggedAt}
@@ -177,6 +187,28 @@ export function SymptomLogFormDialog({
             disabled={disabled}
             required
           />
+        </label>
+
+        <label className="space-y-2 text-sm font-medium">
+          Comida relacionada
+          <select
+            value={formState.mealLogId}
+            onChange={(event) =>
+              setFormState((current) => ({
+                ...current,
+                mealLogId: event.target.value,
+              }))
+            }
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={disabled || isMealLogsLoading}
+          >
+            <option value="">Sin comida relacionada</option>
+            {mealLogs.map((mealLog) => (
+              <option key={mealLog.id} value={mealLog.id}>
+                {mealLog.description} - {formatDateTime(mealLog.consumedAt)}
+              </option>
+            ))}
+          </select>
         </label>
 
         {scoreFields.map((field) => (

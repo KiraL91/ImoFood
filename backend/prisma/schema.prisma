@@ -63,6 +63,7 @@ model MealLog {
   recipe      Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  symptomLogs SymptomLog[]
 
   @@index([consumedAt])
   @@index([recipeId])
@@ -78,10 +79,13 @@ model SymptomLog {
   energy    Int
   sleep     Int
   notes     String?
+  mealLogId String?
+  mealLog   MealLog? @relation(fields: [mealLogId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([loggedAt])
+  @@index([mealLogId])
 }
 
 model AppUser {

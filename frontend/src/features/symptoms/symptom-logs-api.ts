@@ -10,6 +10,7 @@ export type CreateSymptomLogInput = {
   energy: number;
   sleep: number;
   notes?: string | null;
+  mealLogId?: string | null;
 };
 
 export type UpdateSymptomLogInput = Partial<CreateSymptomLogInput>;

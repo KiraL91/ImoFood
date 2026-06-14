@@ -51,4 +51,8 @@ export class UpdateSymptomLogDto {
   @IsOptional()
   @IsString()
   notes?: string | null;
+
+  @IsOptional()
+  @IsString()
+  mealLogId?: string | null;
 }

@@ -8,6 +8,12 @@ export type SymptomLog = {
   energy: number;
   sleep: number;
   notes?: string;
+  mealLogId?: string;
+  mealLog?: {
+    id: string;
+    consumedAt: string;
+    description: string;
+  };
   createdAt: string;
   updatedAt: string;
 };
