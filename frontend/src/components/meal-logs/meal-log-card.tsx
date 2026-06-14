@@ -1,4 +1,12 @@
-import { BookOpen, CalendarClock, Pencil, Trash2, Utensils } from "lucide-react";
+import {
+  Activity,
+  BookOpen,
+  CalendarClock,
+  Pencil,
+  Plus,
+  Trash2,
+  Utensils,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,25 +16,66 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { MealLog } from "@/lib/types/meal-log";
+import type { SymptomLog } from "@/lib/types/symptom-log";
 import { formatDateTime } from "@/lib/utils/format-date";
 
 type MealLogCardProps = {
   canDelete?: boolean;
   canEdit?: boolean;
+  canRegisterSymptoms?: boolean;
   isDeleting?: boolean;
   mealLog: MealLog;
   onDelete?: (mealLog: MealLog) => void;
   onEdit?: (mealLog: MealLog) => void;
+  onRegisterSymptoms?: (mealLog: MealLog) => void;
+  symptomLogs?: SymptomLog[];
+};
+
+const symptomLabels: Record<
+  keyof Pick<SymptomLog, "bloating" | "pain" | "gas" | "transit" | "energy" | "sleep">,
+  string
+> = {
+  bloating: "Hinchazon",
+  pain: "Dolor",
+  gas: "Gases",
+  transit: "Transito",
+  energy: "Energia",
+  sleep: "Sueno",
 };
 
 export function MealLogCard({
   canDelete = false,
   canEdit = false,
+  canRegisterSymptoms = false,
   isDeleting = false,
   mealLog,
   onDelete,
   onEdit,
+  onRegisterSymptoms,
+  symptomLogs = [],
 }: MealLogCardProps) {
+  const latestSymptomLog = symptomLogs[0];
+  const highestSymptomSignal = symptomLogs.reduce<
+    | {
+        label: string;
+        score: number;
+      }
+    | undefined
+  >((highestSignal, symptomLog) => {
+    const symptomSignal = Object.entries(symptomLabels).reduce(
+      (currentHighest, [key, label]) => {
+        const score = symptomLog[key as keyof typeof symptomLabels];
+
+        return score > currentHighest.score ? { label, score } : currentHighest;
+      },
+      { label: "Hinchazon", score: symptomLog.bloating },
+    );
+
+    return !highestSignal || symptomSignal.score > highestSignal.score
+      ? symptomSignal
+      : highestSignal;
+  }, undefined);
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -81,12 +130,43 @@ export function MealLogCard({
           </div>
         )}
 
+        {symptomLogs.length > 0 && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <Activity className="size-4 shrink-0" aria-hidden="true" />
+              <span>Sintomas asociados: {symptomLogs.length}</span>
+            </div>
+            <div className="mt-2 grid gap-1 pl-5 text-xs">
+              {highestSymptomSignal && (
+                <span>
+                  Maximo: {highestSymptomSignal.label} {highestSymptomSignal.score}
+                  /10
+                </span>
+              )}
+              {latestSymptomLog && (
+                <span>Ultimo: {formatDateTime(latestSymptomLog.loggedAt)}</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {mealLog.notes ? (
           <p className="text-sm leading-6 text-muted-foreground">{mealLog.notes}</p>
         ) : (
           <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
             Sin notas adicionales.
           </div>
+        )}
+
+        {canRegisterSymptoms && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onRegisterSymptoms?.(mealLog)}
+          >
+            <Plus aria-hidden="true" />
+            Registrar sintomas
+          </Button>
         )}
       </CardContent>
     </Card>

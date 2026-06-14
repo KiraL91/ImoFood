@@ -25,6 +25,7 @@ type SymptomLogFormState = {
 type SymptomLogFormDialogProps = {
   disabledReason?: string;
   errorMessage?: string | null;
+  initialMealLogId?: string | null;
   initialSymptomLog?: SymptomLog;
   isDisabled?: boolean;
   isMealLogsLoading?: boolean;
@@ -64,7 +65,7 @@ function toDateTimeLocalValue(iso?: string) {
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
-function getEmptyFormState(): SymptomLogFormState {
+function getEmptyFormState(initialMealLogId?: string | null): SymptomLogFormState {
   return {
     loggedAt: toDateTimeLocalValue(),
     bloating: 2,
@@ -74,13 +75,16 @@ function getEmptyFormState(): SymptomLogFormState {
     energy: 7,
     sleep: 6,
     notes: "",
-    mealLogId: "",
+    mealLogId: initialMealLogId ?? "",
   };
 }
 
-function toFormState(symptomLog?: SymptomLog): SymptomLogFormState {
+function toFormState(
+  symptomLog?: SymptomLog,
+  initialMealLogId?: string | null,
+): SymptomLogFormState {
   if (!symptomLog) {
-    return getEmptyFormState();
+    return getEmptyFormState(initialMealLogId);
   }
 
   return {
@@ -116,6 +120,7 @@ function toSymptomLogInput(
 export function SymptomLogFormDialog({
   disabledReason,
   errorMessage,
+  initialMealLogId,
   initialSymptomLog,
   isDisabled = false,
   isMealLogsLoading = false,
@@ -127,15 +132,17 @@ export function SymptomLogFormDialog({
   onOpenChange,
   onSubmit,
 }: SymptomLogFormDialogProps) {
-  const [formState, setFormState] = useState(() => toFormState(initialSymptomLog));
+  const [formState, setFormState] = useState(() =>
+    toFormState(initialSymptomLog, initialMealLogId),
+  );
   const disabled = isDisabled || isSubmitting;
   const isEditing = mode === "edit";
 
   useEffect(() => {
     if (isOpen) {
-      setFormState(toFormState(initialSymptomLog));
+      setFormState(toFormState(initialSymptomLog, initialMealLogId));
     }
-  }, [initialSymptomLog, isOpen]);
+  }, [initialMealLogId, initialSymptomLog, isOpen]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

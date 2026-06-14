@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Activity, CalendarClock, Plus, Server, Utensils } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SymptomLogCard } from "@/components/symptoms/symptom-log-card";
 import { SymptomLogFormDialog } from "@/components/symptoms/symptom-log-form-dialog";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,11 @@ function getErrorMessage(error: unknown) {
 export function SymptomsPanel() {
   const [isSymptomLogDialogOpen, setIsSymptomLogDialogOpen] = useState(false);
   const [editingSymptomLog, setEditingSymptomLog] = useState<SymptomLog | undefined>();
+  const [prefilledMealLogId, setPrefilledMealLogId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const mealLogIdFromQuery = searchParams.get("mealLogId");
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
   const canCreateSymptomLog = hasPermission("symptom-logs:create");
@@ -95,6 +100,18 @@ export function SymptomsPanel() {
   const canOpenCreateDialog =
     hasBackendConfigured && isAuthenticated && canCreateSymptomLog;
 
+  useEffect(() => {
+    if (!mealLogIdFromQuery) {
+      return;
+    }
+
+    setEditingSymptomLog(undefined);
+    setPrefilledMealLogId(mealLogIdFromQuery);
+    setMutationError(null);
+    setIsSymptomLogDialogOpen(true);
+    router.replace("/symptoms");
+  }, [mealLogIdFromQuery, router]);
+
   async function handleSymptomLogSubmit(input: CreateSymptomLogInput) {
     setMutationError(null);
 
@@ -105,11 +122,13 @@ export function SymptomsPanel() {
           input,
         });
         setEditingSymptomLog(undefined);
+        setPrefilledMealLogId(null);
         setIsSymptomLogDialogOpen(false);
         return;
       }
 
       await createSymptomLogMutation.mutateAsync(input);
+      setPrefilledMealLogId(null);
       setIsSymptomLogDialogOpen(false);
     } catch (error) {
       setMutationError(getErrorMessage(error));
@@ -141,11 +160,13 @@ export function SymptomsPanel() {
   function handleOpenCreateSymptomLogDialog() {
     setMutationError(null);
     setEditingSymptomLog(undefined);
+    setPrefilledMealLogId(null);
     setIsSymptomLogDialogOpen(true);
   }
 
   function handleEditSymptomLog(symptomLog: SymptomLog) {
     setMutationError(null);
+    setPrefilledMealLogId(null);
     setEditingSymptomLog(symptomLog);
     setIsSymptomLogDialogOpen(true);
   }
@@ -155,6 +176,7 @@ export function SymptomsPanel() {
 
     if (!open) {
       setEditingSymptomLog(undefined);
+      setPrefilledMealLogId(null);
       setMutationError(null);
     }
   }
@@ -164,6 +186,7 @@ export function SymptomsPanel() {
       <SymptomLogFormDialog
         disabledReason={disabledReason}
         errorMessage={mutationError}
+        initialMealLogId={prefilledMealLogId}
         initialSymptomLog={editingSymptomLog}
         isDisabled={isFormDisabled}
         isMealLogsLoading={mealLogsQuery.isLoading}
@@ -173,6 +196,7 @@ export function SymptomsPanel() {
         mode={editingSymptomLog ? "edit" : "create"}
         onCancel={() => {
           setEditingSymptomLog(undefined);
+          setPrefilledMealLogId(null);
           setMutationError(null);
         }}
         onOpenChange={handleSymptomLogDialogOpenChange}

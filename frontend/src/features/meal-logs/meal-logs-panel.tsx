@@ -14,8 +14,10 @@ import {
   useUpdateMealLog,
 } from "@/features/meal-logs/meal-logs-queries";
 import { useRecipes } from "@/features/recipes/recipes-queries";
+import { useSymptomLogs } from "@/features/symptoms/symptom-logs-queries";
 import { env } from "@/lib/env";
 import type { MealLog } from "@/lib/types/meal-log";
+import type { SymptomLog } from "@/lib/types/symptom-log";
 import { useAuth } from "@/providers/auth-provider";
 
 function getErrorMessage(error: unknown) {
@@ -37,7 +39,9 @@ export function MealLogsPanel() {
   const canCreateMealLog = hasPermission("meal-logs:create");
   const canUpdateMealLog = hasPermission("meal-logs:update");
   const canDeleteMealLog = hasPermission("meal-logs:delete");
+  const canCreateSymptomLog = hasPermission("symptom-logs:create");
   const mealLogsQuery = useMealLogs();
+  const symptomLogsQuery = useSymptomLogs();
   const createMealLogMutation = useCreateMealLog();
   const updateMealLogMutation = useUpdateMealLog();
   const deleteMealLogMutation = useDeleteMealLog();
@@ -50,6 +54,23 @@ export function MealLogsPanel() {
     () => (hasBackendConfigured && !isAuthenticated ? [] : (recipesQuery.data ?? [])),
     [hasBackendConfigured, isAuthenticated, recipesQuery.data],
   );
+  const symptomLogs = useMemo(
+    () => (hasBackendConfigured && !isAuthenticated ? [] : (symptomLogsQuery.data ?? [])),
+    [hasBackendConfigured, isAuthenticated, symptomLogsQuery.data],
+  );
+  const symptomLogsByMealLogId = useMemo(() => {
+    return symptomLogs.reduce((groupedSymptomLogs, symptomLog) => {
+      if (!symptomLog.mealLogId) {
+        return groupedSymptomLogs;
+      }
+
+      const groupedLogs = groupedSymptomLogs.get(symptomLog.mealLogId) ?? [];
+      groupedLogs.push(symptomLog);
+      groupedSymptomLogs.set(symptomLog.mealLogId, groupedLogs);
+
+      return groupedSymptomLogs;
+    }, new Map<string, SymptomLog[]>());
+  }, [symptomLogs]);
   const prefilledRecipe = useMemo(
     () => recipes.find((recipe) => recipe.id === prefilledRecipeId),
     [prefilledRecipeId, recipes],
@@ -67,6 +88,8 @@ export function MealLogsPanel() {
         ? "Tu rol no permite editar comidas."
         : "Tu rol no permite registrar comidas.";
   const canOpenCreateDialog = hasBackendConfigured && isAuthenticated && canCreateMealLog;
+  const canRegisterSymptoms =
+    hasBackendConfigured && isAuthenticated && canCreateSymptomLog;
 
   useEffect(() => {
     if (!recipeIdFromQuery) {
@@ -146,6 +169,10 @@ export function MealLogsPanel() {
     }
   }
 
+  function handleRegisterSymptoms(mealLog: MealLog) {
+    router.push(`/symptoms?mealLogId=${mealLog.id}`);
+  }
+
   return (
     <div className="space-y-5">
       <MealLogFormDialog
@@ -215,6 +242,13 @@ export function MealLogsPanel() {
         </div>
       )}
 
+      {symptomLogsQuery.isError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          No se han podido cargar los sintomas relacionados:{" "}
+          {getErrorMessage(symptomLogsQuery.error)}
+        </div>
+      )}
+
       {mealLogsQuery.isLoading && (
         <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
           Cargando historial...
@@ -227,6 +261,7 @@ export function MealLogsPanel() {
             key={mealLog.id}
             canDelete={hasBackendConfigured && isAuthenticated && canDeleteMealLog}
             canEdit={hasBackendConfigured && isAuthenticated && canUpdateMealLog}
+            canRegisterSymptoms={canRegisterSymptoms}
             isDeleting={
               deleteMealLogMutation.isPending &&
               deleteMealLogMutation.variables === mealLog.id
@@ -234,6 +269,8 @@ export function MealLogsPanel() {
             mealLog={mealLog}
             onDelete={handleDeleteMealLog}
             onEdit={handleEditMealLog}
+            onRegisterSymptoms={handleRegisterSymptoms}
+            symptomLogs={symptomLogsByMealLogId.get(mealLog.id)}
           />
         ))}
       </section>
