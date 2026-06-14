@@ -68,6 +68,22 @@ model MealLog {
   @@index([recipeId])
 }
 
+model SymptomLog {
+  id        String   @id @default(cuid())
+  loggedAt  DateTime
+  bloating  Int
+  pain      Int
+  gas       Int
+  transit   Int
+  energy    Int
+  sleep     Int
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([loggedAt])
+}
+
 model AppUser {
   id           String   @id @default(cuid())
   username     String   @unique

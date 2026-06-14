@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Activity, CalendarClock, ClipboardList } from "lucide-react";
-import { SymptomLogForm } from "@/components/symptoms/symptom-log-form";
+import { Activity, CalendarClock, ClipboardList, Plus, Server } from "lucide-react";
+import { SymptomLogCard } from "@/components/symptoms/symptom-log-card";
+import { SymptomLogFormDialog } from "@/components/symptoms/symptom-log-form-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,58 +12,184 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { MealLog } from "@/lib/types/meal-log";
+import type { CreateSymptomLogInput } from "@/features/symptoms/symptom-logs-api";
+import {
+  useCreateSymptomLog,
+  useDeleteSymptomLog,
+  useSymptomLogs,
+  useUpdateSymptomLog,
+} from "@/features/symptoms/symptom-logs-queries";
+import { env } from "@/lib/env";
 import type { SymptomLog } from "@/lib/types/symptom-log";
 import { formatDateTime } from "@/lib/utils/format-date";
+import { useAuth } from "@/providers/auth-provider";
 
-const symptomSignals = ["Hinchazon", "Dolor", "Gases", "Transito", "Energia", "Sueno"];
+const symptomSignals: Array<{
+  key: keyof Pick<
+    SymptomLog,
+    "bloating" | "pain" | "gas" | "transit" | "energy" | "sleep"
+  >;
+  label: string;
+}> = [
+  { key: "bloating", label: "Hinchazon" },
+  { key: "pain", label: "Dolor" },
+  { key: "gas", label: "Gases" },
+  { key: "transit", label: "Transito" },
+  { key: "energy", label: "Energia" },
+  { key: "sleep", label: "Sueno" },
+];
 
-type SymptomsPanelProps = {
-  mealLogs: MealLog[];
-  symptomLogs: SymptomLog[];
-};
+function getErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "No se ha podido completar la operacion.";
+}
 
-const signalLabels: Record<
-  keyof Pick<SymptomLog, "bloating" | "pain" | "gas" | "transit" | "energy" | "sleep">,
-  string
-> = {
-  bloating: "Hinchazon",
-  pain: "Dolor",
-  gas: "Gases",
-  transit: "Transito",
-  energy: "Energia",
-  sleep: "Sueno",
-};
-
-export function SymptomsPanel({ mealLogs, symptomLogs }: SymptomsPanelProps) {
-  const [isFormVisible, setIsFormVisible] = useState(false);
-  const [localSymptomLogs, setLocalSymptomLogs] = useState(symptomLogs);
-
-  const mealDescriptionById = useMemo(
-    () => new Map(mealLogs.map((mealLog) => [mealLog.id, mealLog.description])),
-    [mealLogs],
+export function SymptomsPanel() {
+  const [isSymptomLogDialogOpen, setIsSymptomLogDialogOpen] = useState(false);
+  const [editingSymptomLog, setEditingSymptomLog] = useState<SymptomLog | undefined>();
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
+  const { hasPermission, isAuthenticated } = useAuth();
+  const canCreateSymptomLog = hasPermission("symptom-logs:create");
+  const canUpdateSymptomLog = hasPermission("symptom-logs:update");
+  const canDeleteSymptomLog = hasPermission("symptom-logs:delete");
+  const symptomLogsQuery = useSymptomLogs();
+  const createSymptomLogMutation = useCreateSymptomLog();
+  const updateSymptomLogMutation = useUpdateSymptomLog();
+  const deleteSymptomLogMutation = useDeleteSymptomLog();
+  const symptomLogs = useMemo(
+    () => (hasBackendConfigured && !isAuthenticated ? [] : (symptomLogsQuery.data ?? [])),
+    [hasBackendConfigured, isAuthenticated, symptomLogsQuery.data],
   );
+  const latestSymptomLog = symptomLogs[0];
+  const isSubmitting =
+    createSymptomLogMutation.isPending || updateSymptomLogMutation.isPending;
+  const isFormDisabled =
+    !hasBackendConfigured ||
+    !isAuthenticated ||
+    (editingSymptomLog ? !canUpdateSymptomLog : !canCreateSymptomLog);
+  const disabledReason = !hasBackendConfigured
+    ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar sintomas contra el backend."
+    : !isAuthenticated
+      ? "Inicia sesion para usar el CRUD real de sintomas."
+      : editingSymptomLog
+        ? "Tu rol no permite editar sintomas."
+        : "Tu rol no permite registrar sintomas.";
+  const canOpenCreateDialog =
+    hasBackendConfigured && isAuthenticated && canCreateSymptomLog;
+
+  async function handleSymptomLogSubmit(input: CreateSymptomLogInput) {
+    setMutationError(null);
+
+    try {
+      if (editingSymptomLog) {
+        await updateSymptomLogMutation.mutateAsync({
+          id: editingSymptomLog.id,
+          input,
+        });
+        setEditingSymptomLog(undefined);
+        setIsSymptomLogDialogOpen(false);
+        return;
+      }
+
+      await createSymptomLogMutation.mutateAsync(input);
+      setIsSymptomLogDialogOpen(false);
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
+    }
+  }
+
+  async function handleDeleteSymptomLog(symptomLog: SymptomLog) {
+    const confirmed = window.confirm(
+      `Borrar entrada de sintomas del ${formatDateTime(symptomLog.loggedAt)}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setMutationError(null);
+
+    try {
+      await deleteSymptomLogMutation.mutateAsync(symptomLog.id);
+
+      if (editingSymptomLog?.id === symptomLog.id) {
+        setEditingSymptomLog(undefined);
+      }
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
+    }
+  }
+
+  function handleOpenCreateSymptomLogDialog() {
+    setMutationError(null);
+    setEditingSymptomLog(undefined);
+    setIsSymptomLogDialogOpen(true);
+  }
+
+  function handleEditSymptomLog(symptomLog: SymptomLog) {
+    setMutationError(null);
+    setEditingSymptomLog(symptomLog);
+    setIsSymptomLogDialogOpen(true);
+  }
+
+  function handleSymptomLogDialogOpenChange(open: boolean) {
+    setIsSymptomLogDialogOpen(open);
+
+    if (!open) {
+      setEditingSymptomLog(undefined);
+      setMutationError(null);
+    }
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <SymptomLogFormDialog
+        disabledReason={disabledReason}
+        errorMessage={mutationError}
+        initialSymptomLog={editingSymptomLog}
+        isDisabled={isFormDisabled}
+        isOpen={isSymptomLogDialogOpen}
+        isSubmitting={isSubmitting}
+        mode={editingSymptomLog ? "edit" : "create"}
+        onCancel={() => {
+          setEditingSymptomLog(undefined);
+          setMutationError(null);
+        }}
+        onOpenChange={handleSymptomLogDialogOpenChange}
+        onSubmit={handleSymptomLogSubmit}
+      />
+
       <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
         <Card>
           <CardHeader>
             <CardTitle>Diario de sintomas</CardTitle>
             <CardDescription>
-              Registro local preparado para correlacionar comidas y evolucion diaria.
+              Registro preparado para seguir evolucion diaria y cruzarlo mas adelante.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {symptomSignals.map((signal) => (
-                <div key={signal} className="rounded-lg border bg-muted p-4">
+                <div key={signal.key} className="rounded-lg border bg-muted p-4">
                   <Activity className="mb-3 size-4 text-primary" aria-hidden="true" />
-                  <p className="text-sm font-medium">{signal}</p>
+                  <p className="text-sm font-medium">{signal.label}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Ultimo:{" "}
+                    {latestSymptomLog
+                      ? `${latestSymptomLog[signal.key]}/10`
+                      : "sin datos"}
+                  </p>
                 </div>
               ))}
             </div>
-            <Button type="button" onClick={() => setIsFormVisible((value) => !value)}>
+            <Button
+              type="button"
+              disabled={!canOpenCreateDialog}
+              title={canOpenCreateDialog ? "Registrar entrada" : disabledReason}
+              onClick={handleOpenCreateSymptomLogDialog}
+            >
               <ClipboardList aria-hidden="true" />
               Registrar entrada
             </Button>
@@ -73,68 +200,88 @@ export function SymptomsPanel({ mealLogs, symptomLogs }: SymptomsPanelProps) {
           <CardHeader>
             <CardTitle>Proxima fase</CardTitle>
             <CardDescription>
-              Correlacion entre alimentos, recetas y sintomas.
+              Correlacion entre comidas, recetas y sintomas.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border bg-secondary p-4 text-sm leading-6 text-secondary-foreground">
               <CalendarClock className="mb-3 size-5" aria-hidden="true" />
-              Backend pendiente para historial, metricas y filtros por fecha.
+              CRUD de sintomas listo. La relacion con historial queda pendiente para una
+              iteracion separada.
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {isFormVisible && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Nueva entrada de sintomas</CardTitle>
-            <CardDescription>
-              Se guarda solo en estado local hasta conectar POST /symptom-logs.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SymptomLogForm
-              mealLogs={mealLogs}
-              onSubmit={(symptomLog) =>
-                setLocalSymptomLogs((current) => [symptomLog, ...current])
-              }
-            />
-          </CardContent>
-        </Card>
+      {!hasBackendConfigured && (
+        <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
+          <Server className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <p>
+            Mostrando sintomas mock. Para usar el CRUD real, levanta el backend y define
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:4000 en frontend/.env.local.
+          </p>
+        </div>
+      )}
+
+      {hasBackendConfigured && !isAuthenticated && (
+        <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
+          <Server className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <p>Inicia sesion en /login para consultar sintomas desde el backend.</p>
+        </div>
+      )}
+
+      {mutationError && !isSymptomLogDialogOpen && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          {mutationError}
+        </div>
+      )}
+
+      {symptomLogsQuery.isError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          {getErrorMessage(symptomLogsQuery.error)}
+        </div>
+      )}
+
+      {symptomLogsQuery.isLoading && (
+        <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
+          Cargando sintomas...
+        </div>
       )}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {localSymptomLogs.map((symptomLog) => (
-          <Card key={symptomLog.id}>
-            <CardHeader>
-              <CardTitle>{formatDateTime(symptomLog.loggedAt)}</CardTitle>
-              {symptomLog.relatedMealLogId && (
-                <CardDescription>
-                  {mealDescriptionById.get(symptomLog.relatedMealLogId)}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(signalLabels).map(([key, label]) => (
-                  <div key={key} className="rounded-md border bg-muted px-3 py-2">
-                    <p className="text-xs text-muted-foreground">{label}</p>
-                    <p className="text-lg font-semibold">
-                      {symptomLog[key as keyof typeof signalLabels]}/10
-                    </p>
-                  </div>
-                ))}
-              </div>
-              {symptomLog.notes && (
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {symptomLog.notes}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+        {symptomLogs.map((symptomLog) => (
+          <SymptomLogCard
+            key={symptomLog.id}
+            canDelete={hasBackendConfigured && isAuthenticated && canDeleteSymptomLog}
+            canEdit={hasBackendConfigured && isAuthenticated && canUpdateSymptomLog}
+            isDeleting={
+              deleteSymptomLogMutation.isPending &&
+              deleteSymptomLogMutation.variables === symptomLog.id
+            }
+            symptomLog={symptomLog}
+            onDelete={handleDeleteSymptomLog}
+            onEdit={handleEditSymptomLog}
+          />
         ))}
       </section>
+
+      {!symptomLogsQuery.isLoading && symptomLogs.length === 0 && (
+        <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
+          Todavia no hay sintomas registrados.
+        </div>
+      )}
+
+      <Button
+        type="button"
+        size="icon"
+        className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
+        disabled={!canOpenCreateDialog}
+        title={canOpenCreateDialog ? "Registrar entrada" : disabledReason}
+        aria-label="Registrar entrada"
+        onClick={handleOpenCreateSymptomLogDialog}
+      >
+        <Plus aria-hidden="true" />
+      </Button>
     </div>
   );
 }

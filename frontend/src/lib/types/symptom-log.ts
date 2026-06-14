@@ -12,7 +12,6 @@ export const symptomLogSchema = z.object({
   energy: symptomScoreSchema,
   sleep: symptomScoreSchema,
   notes: z.string().optional(),
-  relatedMealLogId: z.string().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });

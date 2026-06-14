@@ -1,6 +1,6 @@
 import { symptomLogSchema, type SymptomLog } from "@/lib/types/symptom-log";
 
-// Backend later: replace with GET /symptom-logs and POST /symptom-logs.
+// Used only when NEXT_PUBLIC_API_BASE_URL is not configured.
 export const symptomLogs: SymptomLog[] = symptomLogSchema.array().parse([
   {
     id: "symptom-log-001",
@@ -12,7 +12,6 @@ export const symptomLogs: SymptomLog[] = symptomLogSchema.array().parse([
     energy: 7,
     sleep: 6,
     notes: "Manana estable tras desayuno simple.",
-    relatedMealLogId: "meal-log-001",
     createdAt: "2026-06-10T11:35:00.000Z",
     updatedAt: "2026-06-10T11:35:00.000Z",
   },
@@ -26,7 +25,6 @@ export const symptomLogs: SymptomLog[] = symptomLogSchema.array().parse([
     energy: 6,
     sleep: 7,
     notes: "Sin empeoramiento claro despues del bowl.",
-    relatedMealLogId: "meal-log-002",
     createdAt: "2026-06-09T18:25:00.000Z",
     updatedAt: "2026-06-09T18:25:00.000Z",
   },
@@ -40,7 +38,6 @@ export const symptomLogs: SymptomLog[] = symptomLogSchema.array().parse([
     energy: 5,
     sleep: 5,
     notes: "Ligera hinchazon tras prueba de calabacin.",
-    relatedMealLogId: "meal-log-003",
     createdAt: "2026-06-08T23:05:00.000Z",
     updatedAt: "2026-06-08T23:05:00.000Z",
   },
