@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Server } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MealLogDraftCard } from "@/components/meal-logs/meal-log-draft-card";
 import { MealLogCard } from "@/components/meal-logs/meal-log-card";
+import { MealLogFormDialog } from "@/components/meal-logs/meal-log-form-dialog";
 import { Button } from "@/components/ui/button";
 import type { CreateMealLogInput } from "@/features/meal-logs/meal-logs-api";
 import {
@@ -25,7 +25,7 @@ function getErrorMessage(error: unknown) {
 }
 
 export function MealLogsPanel() {
-  const [isDraftVisible, setIsDraftVisible] = useState(false);
+  const [isMealLogDialogOpen, setIsMealLogDialogOpen] = useState(false);
   const [editingMealLog, setEditingMealLog] = useState<MealLog | undefined>();
   const [prefilledRecipeId, setPrefilledRecipeId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export function MealLogsPanel() {
       : editingMealLog
         ? "Tu rol no permite editar comidas."
         : "Tu rol no permite registrar comidas.";
-  const showDraft = isDraftVisible || Boolean(editingMealLog);
+  const canOpenCreateDialog = hasBackendConfigured && isAuthenticated && canCreateMealLog;
 
   useEffect(() => {
     if (!recipeIdFromQuery) {
@@ -75,7 +75,8 @@ export function MealLogsPanel() {
 
     setEditingMealLog(undefined);
     setPrefilledRecipeId(recipeIdFromQuery);
-    setIsDraftVisible(true);
+    setMutationError(null);
+    setIsMealLogDialogOpen(true);
     router.replace("/meal-logs");
   }, [recipeIdFromQuery, router]);
 
@@ -89,12 +90,13 @@ export function MealLogsPanel() {
           input,
         });
         setEditingMealLog(undefined);
+        setIsMealLogDialogOpen(false);
         return;
       }
 
       await createMealLogMutation.mutateAsync(input);
       setPrefilledRecipeId(null);
-      setIsDraftVisible(false);
+      setIsMealLogDialogOpen(false);
     } catch (error) {
       setMutationError(getErrorMessage(error));
     }
@@ -120,19 +122,52 @@ export function MealLogsPanel() {
     }
   }
 
-  function handleOpenDraft() {
+  function handleOpenCreateMealLogDialog() {
+    setMutationError(null);
     setPrefilledRecipeId(null);
     setEditingMealLog(undefined);
-    setIsDraftVisible((value) => !value);
+    setIsMealLogDialogOpen(true);
   }
 
   function handleEditMealLog(mealLog: MealLog) {
+    setMutationError(null);
     setPrefilledRecipeId(null);
     setEditingMealLog(mealLog);
+    setIsMealLogDialogOpen(true);
+  }
+
+  function handleMealLogDialogOpenChange(open: boolean) {
+    setIsMealLogDialogOpen(open);
+
+    if (!open) {
+      setEditingMealLog(undefined);
+      setPrefilledRecipeId(null);
+      setMutationError(null);
+    }
   }
 
   return (
     <div className="space-y-5">
+      <MealLogFormDialog
+        disabledReason={disabledReason}
+        errorMessage={mutationError}
+        initialMealLog={editingMealLog}
+        initialRecipe={prefilledRecipe}
+        isDisabled={isFormDisabled}
+        isOpen={isMealLogDialogOpen}
+        isRecipesLoading={recipesQuery.isLoading}
+        isSubmitting={isSubmitting}
+        mode={editingMealLog ? "edit" : "create"}
+        recipes={recipes}
+        onCancel={() => {
+          setEditingMealLog(undefined);
+          setPrefilledRecipeId(null);
+          setMutationError(null);
+        }}
+        onOpenChange={handleMealLogDialogOpenChange}
+        onSubmit={handleMealLogSubmit}
+      />
+
       <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold">Historial de comidas</h3>
@@ -140,29 +175,16 @@ export function MealLogsPanel() {
             Comidas registradas para correlacionar con sintomas.
           </p>
         </div>
-        <Button type="button" onClick={handleOpenDraft}>
+        <Button
+          type="button"
+          disabled={!canOpenCreateDialog}
+          title={canOpenCreateDialog ? "Registrar comida" : disabledReason}
+          onClick={handleOpenCreateMealLogDialog}
+        >
           <Plus aria-hidden="true" />
           Registrar comida
         </Button>
       </section>
-
-      {showDraft && (
-        <MealLogDraftCard
-          disabledReason={disabledReason}
-          initialMealLog={editingMealLog}
-          initialRecipe={prefilledRecipe}
-          isDisabled={isFormDisabled}
-          isRecipesLoading={recipesQuery.isLoading}
-          isSubmitting={isSubmitting}
-          mode={editingMealLog ? "edit" : "create"}
-          recipes={recipes}
-          onCancel={() => {
-            setEditingMealLog(undefined);
-            setPrefilledRecipeId(null);
-          }}
-          onSubmit={handleMealLogSubmit}
-        />
-      )}
 
       {!hasBackendConfigured && (
         <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
@@ -181,7 +203,7 @@ export function MealLogsPanel() {
         </div>
       )}
 
-      {mutationError && (
+      {mutationError && !isMealLogDialogOpen && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {mutationError}
         </div>
@@ -221,6 +243,18 @@ export function MealLogsPanel() {
           Todavia no hay comidas registradas.
         </div>
       )}
+
+      <Button
+        type="button"
+        size="icon"
+        className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
+        disabled={!canOpenCreateDialog}
+        title={canOpenCreateDialog ? "Registrar comida" : disabledReason}
+        aria-label="Registrar comida"
+        onClick={handleOpenCreateMealLogDialog}
+      >
+        <Plus aria-hidden="true" />
+      </Button>
     </div>
   );
 }
