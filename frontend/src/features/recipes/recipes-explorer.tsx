@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Plus, Search, Server, Star, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { RecipeCard } from "@/components/recipes/recipe-card";
 import { RecipeFormDialog } from "@/components/recipes/recipe-form-dialog";
 import { Button } from "@/components/ui/button";
@@ -44,11 +45,13 @@ export function RecipesExplorer() {
   const [editingRecipe, setEditingRecipe] = useState<Recipe | undefined>();
   const [isRecipeDialogOpen, setIsRecipeDialogOpen] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const router = useRouter();
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
   const canCreateRecipe = hasPermission("recipes:create");
   const canUpdateRecipe = hasPermission("recipes:update");
   const canDeleteRecipe = hasPermission("recipes:delete");
+  const canCreateMealLog = hasPermission("meal-logs:create");
   const recipesQuery = useRecipes();
   const createRecipeMutation = useCreateRecipe();
   const updateRecipeMutation = useUpdateRecipe();
@@ -63,6 +66,7 @@ export function RecipesExplorer() {
     !isAuthenticated ||
     (editingRecipe ? !canUpdateRecipe : !canCreateRecipe);
   const canOpenCreateDialog = hasBackendConfigured && isAuthenticated && canCreateRecipe;
+  const canLogRecipeAsMeal = hasBackendConfigured && isAuthenticated && canCreateMealLog;
   const disabledReason = !hasBackendConfigured
     ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar recetas contra el backend."
     : !isAuthenticated
@@ -199,6 +203,10 @@ export function RecipesExplorer() {
       setEditingRecipe(undefined);
       setMutationError(null);
     }
+  }
+
+  function handleLogRecipeMeal(recipe: Recipe) {
+    router.push(`/meal-logs?recipeId=${encodeURIComponent(recipe.id)}`);
   }
 
   return (
@@ -352,6 +360,7 @@ export function RecipesExplorer() {
             key={recipe.id}
             canDelete={hasBackendConfigured && isAuthenticated && canDeleteRecipe}
             canEdit={hasBackendConfigured && isAuthenticated && canUpdateRecipe}
+            canLogMeal={canLogRecipeAsMeal}
             isDeleting={
               deleteRecipeMutation.isPending &&
               deleteRecipeMutation.variables === recipe.id
@@ -359,6 +368,7 @@ export function RecipesExplorer() {
             recipe={recipe}
             onDelete={handleDeleteRecipe}
             onEdit={handleOpenEditRecipeDialog}
+            onLogMeal={handleLogRecipeMeal}
             onRatingChange={handleRatingChange}
           />
         ))}

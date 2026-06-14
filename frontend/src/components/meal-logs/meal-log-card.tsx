@@ -1,4 +1,4 @@
-import { CalendarClock, Pencil, Trash2, Utensils } from "lucide-react";
+import { BookOpen, CalendarClock, Pencil, Trash2, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -73,7 +73,14 @@ export function MealLogCard({
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
+        {mealLog.recipe && (
+          <div className="inline-flex max-w-full items-center gap-1.5 rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <BookOpen className="size-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">Receta: {mealLog.recipe.name}</span>
+          </div>
+        )}
+
         {mealLog.notes ? (
           <p className="text-sm leading-6 text-muted-foreground">{mealLog.notes}</p>
         ) : (

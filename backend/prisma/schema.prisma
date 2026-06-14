@@ -48,6 +48,7 @@ model Recipe {
   rating          Int?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  mealLogs        MealLog[]
 
   @@index([name])
   @@index([rating])
@@ -58,10 +59,13 @@ model MealLog {
   consumedAt  DateTime
   description String
   notes       String?
+  recipeId    String?
+  recipe      Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([consumedAt])
+  @@index([recipeId])
 }
 
 model AppUser {

@@ -5,6 +5,7 @@ export type CreateMealLogInput = {
   consumedAt: string;
   description: string;
   notes?: string;
+  recipeId?: string | null;
 };
 
 export type UpdateMealLogInput = Partial<CreateMealLogInput>;

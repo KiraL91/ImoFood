@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Server } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MealLogDraftCard } from "@/components/meal-logs/meal-log-draft-card";
 import { MealLogCard } from "@/components/meal-logs/meal-log-card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
   useMealLogs,
   useUpdateMealLog,
 } from "@/features/meal-logs/meal-logs-queries";
+import { useRecipes } from "@/features/recipes/recipes-queries";
 import { env } from "@/lib/env";
 import type { MealLog } from "@/lib/types/meal-log";
 import { useAuth } from "@/providers/auth-provider";
@@ -25,7 +27,11 @@ function getErrorMessage(error: unknown) {
 export function MealLogsPanel() {
   const [isDraftVisible, setIsDraftVisible] = useState(false);
   const [editingMealLog, setEditingMealLog] = useState<MealLog | undefined>();
+  const [prefilledRecipeId, setPrefilledRecipeId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const recipeIdFromQuery = searchParams.get("recipeId");
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
   const canCreateMealLog = hasPermission("meal-logs:create");
@@ -35,9 +41,18 @@ export function MealLogsPanel() {
   const createMealLogMutation = useCreateMealLog();
   const updateMealLogMutation = useUpdateMealLog();
   const deleteMealLogMutation = useDeleteMealLog();
+  const recipesQuery = useRecipes();
   const mealLogs = useMemo(
     () => (hasBackendConfigured && !isAuthenticated ? [] : (mealLogsQuery.data ?? [])),
     [hasBackendConfigured, isAuthenticated, mealLogsQuery.data],
+  );
+  const recipes = useMemo(
+    () => (hasBackendConfigured && !isAuthenticated ? [] : (recipesQuery.data ?? [])),
+    [hasBackendConfigured, isAuthenticated, recipesQuery.data],
+  );
+  const prefilledRecipe = useMemo(
+    () => recipes.find((recipe) => recipe.id === prefilledRecipeId),
+    [prefilledRecipeId, recipes],
   );
   const isSubmitting = createMealLogMutation.isPending || updateMealLogMutation.isPending;
   const isFormDisabled =
@@ -53,6 +68,17 @@ export function MealLogsPanel() {
         : "Tu rol no permite registrar comidas.";
   const showDraft = isDraftVisible || Boolean(editingMealLog);
 
+  useEffect(() => {
+    if (!recipeIdFromQuery) {
+      return;
+    }
+
+    setEditingMealLog(undefined);
+    setPrefilledRecipeId(recipeIdFromQuery);
+    setIsDraftVisible(true);
+    router.replace("/meal-logs");
+  }, [recipeIdFromQuery, router]);
+
   async function handleMealLogSubmit(input: CreateMealLogInput) {
     setMutationError(null);
 
@@ -67,6 +93,7 @@ export function MealLogsPanel() {
       }
 
       await createMealLogMutation.mutateAsync(input);
+      setPrefilledRecipeId(null);
       setIsDraftVisible(false);
     } catch (error) {
       setMutationError(getErrorMessage(error));
@@ -94,8 +121,14 @@ export function MealLogsPanel() {
   }
 
   function handleOpenDraft() {
+    setPrefilledRecipeId(null);
     setEditingMealLog(undefined);
     setIsDraftVisible((value) => !value);
+  }
+
+  function handleEditMealLog(mealLog: MealLog) {
+    setPrefilledRecipeId(null);
+    setEditingMealLog(mealLog);
   }
 
   return (
@@ -117,10 +150,16 @@ export function MealLogsPanel() {
         <MealLogDraftCard
           disabledReason={disabledReason}
           initialMealLog={editingMealLog}
+          initialRecipe={prefilledRecipe}
           isDisabled={isFormDisabled}
+          isRecipesLoading={recipesQuery.isLoading}
           isSubmitting={isSubmitting}
           mode={editingMealLog ? "edit" : "create"}
-          onCancel={() => setEditingMealLog(undefined)}
+          recipes={recipes}
+          onCancel={() => {
+            setEditingMealLog(undefined);
+            setPrefilledRecipeId(null);
+          }}
           onSubmit={handleMealLogSubmit}
         />
       )}
@@ -172,7 +211,7 @@ export function MealLogsPanel() {
             }
             mealLog={mealLog}
             onDelete={handleDeleteMealLog}
-            onEdit={setEditingMealLog}
+            onEdit={handleEditMealLog}
           />
         ))}
       </section>

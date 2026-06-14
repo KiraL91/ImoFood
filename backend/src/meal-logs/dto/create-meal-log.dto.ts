@@ -10,4 +10,8 @@ export class CreateMealLogDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  recipeId?: string;
 }

@@ -12,4 +12,8 @@ export class UpdateMealLogDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  recipeId?: string | null;
 }

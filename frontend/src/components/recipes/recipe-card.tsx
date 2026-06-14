@@ -1,4 +1,4 @@
-import { Clock, ListChecks, Pencil, Trash2 } from "lucide-react";
+import { Clock, ListChecks, Pencil, Trash2, Utensils } from "lucide-react";
 import { RecipeRating } from "@/components/recipes/recipe-rating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,11 @@ import type { Recipe } from "@/lib/types/recipe";
 type RecipeCardProps = {
   canDelete?: boolean;
   canEdit?: boolean;
+  canLogMeal?: boolean;
   isDeleting?: boolean;
   onDelete?: (recipe: Recipe) => void;
   onEdit?: (recipe: Recipe) => void;
+  onLogMeal?: (recipe: Recipe) => void;
   onRatingChange?: (
     recipe: Recipe,
     rating: NonNullable<Recipe["rating"]>,
@@ -27,9 +29,11 @@ type RecipeCardProps = {
 export function RecipeCard({
   canDelete = false,
   canEdit = false,
+  canLogMeal = false,
   isDeleting = false,
   onDelete,
   onEdit,
+  onLogMeal,
   onRatingChange,
   recipe,
 }: RecipeCardProps) {
@@ -69,6 +73,18 @@ export function RecipeCard({
         {recipe.description && <CardDescription>{recipe.description}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4">
+        {canLogMeal && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => onLogMeal?.(recipe)}
+          >
+            <Utensils aria-hidden="true" />
+            Registrar como comida
+          </Button>
+        )}
+
         <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <Clock className="size-4" aria-hidden="true" />

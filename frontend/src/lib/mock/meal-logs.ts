@@ -15,6 +15,11 @@ export const mealLogs: MealLog[] = mealLogSchema.array().parse([
     consumedAt: "2026-06-09T13:45:00.000Z",
     description: "Bowl de arroz con pollo",
     notes: "Comida segura antes de una tarde con reuniones.",
+    recipeId: "recipe-001",
+    recipe: {
+      id: "recipe-001",
+      name: "Bowl de arroz con pollo",
+    },
     createdAt: "2026-06-09T14:00:00.000Z",
     updatedAt: "2026-06-09T14:00:00.000Z",
   },

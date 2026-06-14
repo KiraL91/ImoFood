@@ -13,21 +13,26 @@ import {
 import { Input } from "@/components/ui/input";
 import type { CreateMealLogInput } from "@/features/meal-logs/meal-logs-api";
 import type { MealLog } from "@/lib/types/meal-log";
+import type { Recipe } from "@/lib/types/recipe";
 
 type MealLogFormState = {
   consumedAt: string;
   description: string;
   notes: string;
+  recipeId: string;
 };
 
 type MealLogDraftCardProps = {
   disabledReason?: string;
   initialMealLog?: MealLog;
+  initialRecipe?: Recipe;
   isDisabled?: boolean;
+  isRecipesLoading?: boolean;
   isSubmitting?: boolean;
   mode?: "create" | "edit";
   onCancel?: () => void;
   onSubmit?: (input: CreateMealLogInput) => Promise<void> | void;
+  recipes?: Recipe[];
 };
 
 function toDateTimeLocalValue(iso?: string) {
@@ -42,50 +47,61 @@ function toDateTimeLocalValue(iso?: string) {
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
-function getEmptyFormState(): MealLogFormState {
+function getEmptyFormState(initialRecipe?: Recipe): MealLogFormState {
   return {
     consumedAt: toDateTimeLocalValue(),
-    description: "",
+    description: initialRecipe?.name ?? "",
     notes: "",
+    recipeId: initialRecipe?.id ?? "",
   };
 }
 
-function toFormState(mealLog?: MealLog): MealLogFormState {
+function toFormState(mealLog?: MealLog, initialRecipe?: Recipe): MealLogFormState {
   if (!mealLog) {
-    return getEmptyFormState();
+    return getEmptyFormState(initialRecipe);
   }
 
   return {
     consumedAt: toDateTimeLocalValue(mealLog.consumedAt),
     description: mealLog.description,
     notes: mealLog.notes ?? "",
+    recipeId: mealLog.recipeId ?? "",
   };
 }
 
-function toMealLogInput(formState: MealLogFormState): CreateMealLogInput {
+function toMealLogInput(
+  formState: MealLogFormState,
+  isEditing: boolean,
+): CreateMealLogInput {
   return {
     consumedAt: new Date(formState.consumedAt).toISOString(),
     description: formState.description.trim(),
     notes: formState.notes.trim() || undefined,
+    recipeId: formState.recipeId || (isEditing ? null : undefined),
   };
 }
 
 export function MealLogDraftCard({
   disabledReason,
   initialMealLog,
+  initialRecipe,
   isDisabled = false,
+  isRecipesLoading = false,
   isSubmitting = false,
   mode = "create",
   onCancel,
   onSubmit,
+  recipes = [],
 }: MealLogDraftCardProps) {
-  const [formState, setFormState] = useState(() => toFormState(initialMealLog));
+  const [formState, setFormState] = useState(() =>
+    toFormState(initialMealLog, initialRecipe),
+  );
   const disabled = isDisabled || isSubmitting;
   const isEditing = mode === "edit";
 
   useEffect(() => {
-    setFormState(toFormState(initialMealLog));
-  }, [initialMealLog]);
+    setFormState(toFormState(initialMealLog, initialRecipe));
+  }, [initialMealLog, initialRecipe]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -94,11 +110,22 @@ export function MealLogDraftCard({
       return;
     }
 
-    await onSubmit(toMealLogInput(formState));
+    await onSubmit(toMealLogInput(formState, isEditing));
 
     if (!isEditing) {
-      setFormState(getEmptyFormState());
+      setFormState(getEmptyFormState(initialRecipe));
     }
+  }
+
+  function handleRecipeChange(recipeId: string) {
+    const selectedRecipe = recipes.find((recipe) => recipe.id === recipeId);
+
+    setFormState((current) => ({
+      ...current,
+      description:
+        !isEditing && selectedRecipe ? selectedRecipe.name : current.description,
+      recipeId,
+    }));
   }
 
   return (
@@ -134,6 +161,23 @@ export function MealLogDraftCard({
               disabled={disabled}
               required
             />
+          </label>
+
+          <label className="space-y-2 text-sm font-medium">
+            Receta asociada
+            <select
+              value={formState.recipeId}
+              onChange={(event) => handleRecipeChange(event.target.value)}
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={disabled || isRecipesLoading}
+            >
+              <option value="">Sin receta asociada</option>
+              {recipes.map((recipe) => (
+                <option key={recipe.id} value={recipe.id}>
+                  {recipe.name}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="space-y-2 text-sm font-medium">
