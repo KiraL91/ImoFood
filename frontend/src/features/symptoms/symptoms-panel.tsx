@@ -1,17 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Activity, CalendarClock, ClipboardList, Plus, Server } from "lucide-react";
+import { Activity, CalendarClock, Plus, Server, Utensils } from "lucide-react";
 import { SymptomLogCard } from "@/components/symptoms/symptom-log-card";
 import { SymptomLogFormDialog } from "@/components/symptoms/symptom-log-form-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import type { CreateSymptomLogInput } from "@/features/symptoms/symptom-logs-api";
 import {
   useCreateSymptomLog,
@@ -69,6 +62,23 @@ export function SymptomsPanel() {
     [hasBackendConfigured, isAuthenticated, mealLogsQuery.data],
   );
   const latestSymptomLog = symptomLogs[0];
+  const latestHighestSignal = useMemo(() => {
+    if (!latestSymptomLog) {
+      return undefined;
+    }
+
+    return symptomSignals.reduce((highestSignal, signal) =>
+      latestSymptomLog[signal.key] > latestSymptomLog[highestSignal.key]
+        ? signal
+        : highestSignal,
+    );
+  }, [latestSymptomLog]);
+  const relatedSymptomLogsCount = useMemo(
+    () =>
+      symptomLogs.filter((symptomLog) => symptomLog.mealLogId || symptomLog.mealLog)
+        .length,
+    [symptomLogs],
+  );
   const isSubmitting =
     createSymptomLogMutation.isPending || updateSymptomLogMutation.isPending;
   const isFormDisabled =
@@ -169,57 +179,72 @@ export function SymptomsPanel() {
         onSubmit={handleSymptomLogSubmit}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Diario de sintomas</CardTitle>
-            <CardDescription>
-              Registro preparado para seguir evolucion diaria y cruzarlo mas adelante.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {symptomSignals.map((signal) => (
-                <div key={signal.key} className="rounded-lg border bg-muted p-4">
-                  <Activity className="mb-3 size-4 text-primary" aria-hidden="true" />
-                  <p className="text-sm font-medium">{signal.label}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Ultimo:{" "}
-                    {latestSymptomLog
-                      ? `${latestSymptomLog[signal.key]}/10`
-                      : "sin datos"}
-                  </p>
-                </div>
-              ))}
-            </div>
-            <Button
-              type="button"
-              disabled={!canOpenCreateDialog}
-              title={canOpenCreateDialog ? "Registrar entrada" : disabledReason}
-              onClick={handleOpenCreateSymptomLogDialog}
-            >
-              <ClipboardList aria-hidden="true" />
-              Registrar entrada
-            </Button>
-          </CardContent>
-        </Card>
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Seguimiento de sintomas</h3>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Registra sintomas y relacionalos con comidas para revisar patrones.
+          </p>
+        </div>
+        <Button
+          type="button"
+          disabled={!canOpenCreateDialog}
+          title={canOpenCreateDialog ? "Registrar entrada" : disabledReason}
+          onClick={handleOpenCreateSymptomLogDialog}
+        >
+          <Plus aria-hidden="true" />
+          Registrar entrada
+        </Button>
+      </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Relacion activa</CardTitle>
-            <CardDescription>
-              Correlacion entre comidas, recetas y sintomas.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border bg-secondary p-4 text-sm leading-6 text-secondary-foreground">
-              <CalendarClock className="mb-3 size-5" aria-hidden="true" />
-              Cada entrada de sintomas puede asociarse a una comida del historial para
-              revisar patrones despues.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <section
+        aria-label="Resumen de sintomas"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        <div className="rounded-md border bg-muted/40 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <CalendarClock className="size-4" aria-hidden="true" />
+            Ultima entrada
+          </div>
+          <p className="mt-2 text-sm font-semibold">
+            {latestSymptomLog
+              ? formatDateTime(latestSymptomLog.loggedAt)
+              : "Sin registros"}
+          </p>
+        </div>
+
+        <div className="rounded-md border bg-muted/40 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <Activity className="size-4" aria-hidden="true" />
+            Sintoma mas alto
+          </div>
+          <p className="mt-2 text-sm font-semibold">
+            {latestSymptomLog && latestHighestSignal
+              ? `${latestHighestSignal.label} ${latestSymptomLog[latestHighestSignal.key]}/10`
+              : "Sin datos"}
+          </p>
+        </div>
+
+        <div className="rounded-md border bg-muted/40 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <Utensils className="size-4" aria-hidden="true" />
+            Con comida relacionada
+          </div>
+          <p className="mt-2 text-sm font-semibold">
+            {symptomLogs.length > 0
+              ? `${relatedSymptomLogsCount}/${symptomLogs.length}`
+              : "Sin registros"}
+          </p>
+        </div>
+
+        <div className="rounded-md border bg-muted/40 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <Server className="size-4" aria-hidden="true" />
+            Entradas
+          </div>
+          <p className="mt-2 text-sm font-semibold">{symptomLogs.length}</p>
+        </div>
+      </section>
 
       {!hasBackendConfigured && (
         <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
@@ -281,8 +306,24 @@ export function SymptomsPanel() {
       </section>
 
       {!symptomLogsQuery.isLoading && symptomLogs.length === 0 && (
-        <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-          Todavia no hay sintomas registrados.
+        <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
+          <p className="font-medium text-foreground">
+            Todavia no hay sintomas registrados.
+          </p>
+          <p className="mx-auto mt-2 max-w-lg leading-6">
+            Registra tu primera entrada para empezar a comparar evolucion y comidas
+            relacionadas.
+          </p>
+          <Button
+            type="button"
+            className="mt-4"
+            disabled={!canOpenCreateDialog}
+            title={canOpenCreateDialog ? "Registrar entrada" : disabledReason}
+            onClick={handleOpenCreateSymptomLogDialog}
+          >
+            <Plus aria-hidden="true" />
+            Registrar entrada
+          </Button>
         </div>
       )}
 
