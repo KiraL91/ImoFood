@@ -383,7 +383,7 @@ export function RecipesExplorer() {
       <Button
         type="button"
         size="icon"
-        className="fixed bottom-24 right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
+        className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
         disabled={!canOpenCreateDialog}
         title={canOpenCreateDialog ? "Anadir receta" : disabledReason}
         aria-label="Anadir receta"
