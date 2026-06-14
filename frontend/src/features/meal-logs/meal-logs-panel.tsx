@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Server } from "lucide-react";
+import { CalendarDays, Plus, RotateCcw, Server } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MealLogCard } from "@/components/meal-logs/meal-log-card";
 import { MealLogFormDialog } from "@/components/meal-logs/meal-log-form-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { CreateMealLogInput } from "@/features/meal-logs/meal-logs-api";
 import {
   useCreateMealLog,
@@ -30,6 +31,8 @@ export function MealLogsPanel() {
   const [isMealLogDialogOpen, setIsMealLogDialogOpen] = useState(false);
   const [editingMealLog, setEditingMealLog] = useState<MealLog | undefined>();
   const [prefilledRecipeId, setPrefilledRecipeId] = useState<string | null>(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [mutationError, setMutationError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,6 +74,30 @@ export function MealLogsPanel() {
       return groupedSymptomLogs;
     }, new Map<string, SymptomLog[]>());
   }, [symptomLogs]);
+  const hasDateFilter = Boolean(dateFrom || dateTo);
+  const isDateRangeInvalid = Boolean(dateFrom && dateTo && dateFrom > dateTo);
+  const filteredMealLogs = useMemo(() => {
+    if (!hasDateFilter || isDateRangeInvalid) {
+      return isDateRangeInvalid ? [] : mealLogs;
+    }
+
+    const fromDate = dateFrom ? new Date(`${dateFrom}T00:00:00`) : undefined;
+    const toDate = dateTo ? new Date(`${dateTo}T23:59:59.999`) : undefined;
+
+    return mealLogs.filter((mealLog) => {
+      const consumedAt = new Date(mealLog.consumedAt);
+
+      if (fromDate && consumedAt < fromDate) {
+        return false;
+      }
+
+      if (toDate && consumedAt > toDate) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [dateFrom, dateTo, hasDateFilter, isDateRangeInvalid, mealLogs]);
   const prefilledRecipe = useMemo(
     () => recipes.find((recipe) => recipe.id === prefilledRecipeId),
     [prefilledRecipeId, recipes],
@@ -173,6 +200,11 @@ export function MealLogsPanel() {
     router.push(`/symptoms?mealLogId=${mealLog.id}`);
   }
 
+  function handleClearDateFilter() {
+    setDateFrom("");
+    setDateTo("");
+  }
+
   return (
     <div className="space-y-5">
       <MealLogFormDialog
@@ -223,6 +255,65 @@ export function MealLogsPanel() {
         </div>
       )}
 
+      <section className="rounded-lg border bg-card p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex items-start gap-3">
+            <CalendarDays
+              className="mt-1 size-4 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <div>
+              <h4 className="text-sm font-medium">Buscar por rango de fechas</h4>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Filtra las comidas por fecha de consumo.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_auto]">
+            <label className="grid gap-1.5 text-sm font-medium">
+              Desde
+              <Input
+                type="date"
+                value={dateFrom}
+                max={dateTo || undefined}
+                onInput={(event) => setDateFrom(event.currentTarget.value)}
+                onChange={(event) => setDateFrom(event.target.value)}
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm font-medium">
+              Hasta
+              <Input
+                type="date"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onInput={(event) => setDateTo(event.currentTarget.value)}
+                onChange={(event) => setDateTo(event.target.value)}
+              />
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!hasDateFilter}
+              onClick={handleClearDateFilter}
+            >
+              <RotateCcw aria-hidden="true" />
+              Limpiar
+            </Button>
+          </div>
+        </div>
+
+        {isDateRangeInvalid ? (
+          <p className="mt-3 text-sm text-destructive">
+            La fecha inicial no puede ser posterior a la fecha final.
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Mostrando {filteredMealLogs.length} de {mealLogs.length} entradas.
+          </p>
+        )}
+      </section>
+
       {hasBackendConfigured && !isAuthenticated && (
         <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
           <Server className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -256,7 +347,7 @@ export function MealLogsPanel() {
       )}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {mealLogs.map((mealLog) => (
+        {filteredMealLogs.map((mealLog) => (
           <MealLogCard
             key={mealLog.id}
             canDelete={hasBackendConfigured && isAuthenticated && canDeleteMealLog}
@@ -275,9 +366,11 @@ export function MealLogsPanel() {
         ))}
       </section>
 
-      {!mealLogsQuery.isLoading && mealLogs.length === 0 && (
+      {!mealLogsQuery.isLoading && filteredMealLogs.length === 0 && (
         <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-          Todavia no hay comidas registradas.
+          {hasDateFilter
+            ? "No hay comidas registradas en ese rango de fechas."
+            : "Todavia no hay comidas registradas."}
         </div>
       )}
 
