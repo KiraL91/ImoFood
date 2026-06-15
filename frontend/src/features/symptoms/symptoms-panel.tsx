@@ -205,19 +205,19 @@ export function SymptomsPanel() {
 
       <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Seguimiento de sintomas</h3>
+          <h3 className="text-lg font-semibold">Diario de sintomas</h3>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Registra sintomas y relacionalos con comidas para revisar patrones.
+            Registra sintomas cuando aparezcan y asocialos a una ingesta previa si aplica.
           </p>
         </div>
         <Button
           type="button"
           disabled={!canOpenCreateDialog}
-          title={canOpenCreateDialog ? "Registrar entrada" : disabledReason}
+          title={canOpenCreateDialog ? "Registrar sintomas" : disabledReason}
           onClick={handleOpenCreateSymptomLogDialog}
         >
           <Plus aria-hidden="true" />
-          Registrar entrada
+          Registrar sintomas
         </Button>
       </section>
 
@@ -252,7 +252,7 @@ export function SymptomsPanel() {
         <div className="rounded-md border bg-muted/40 px-4 py-3">
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Utensils className="size-4" aria-hidden="true" />
-            Con comida relacionada
+            Con ingesta relacionada
           </div>
           <p className="mt-2 text-sm font-semibold">
             {symptomLogs.length > 0
@@ -301,7 +301,7 @@ export function SymptomsPanel() {
 
       {mealLogsQuery.isError && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          No se ha podido cargar el historial para relacionar comidas:{" "}
+          No se ha podido cargar el historial para relacionar ingestas:{" "}
           {getErrorMessage(mealLogsQuery.error)}
         </div>
       )}
@@ -335,18 +335,18 @@ export function SymptomsPanel() {
             Todavia no hay sintomas registrados.
           </p>
           <p className="mx-auto mt-2 max-w-lg leading-6">
-            Registra tu primera entrada para empezar a comparar evolucion y comidas
+            Registra tu primera entrada para empezar a comparar evolucion e ingestas
             relacionadas.
           </p>
           <Button
             type="button"
             className="mt-4"
             disabled={!canOpenCreateDialog}
-            title={canOpenCreateDialog ? "Registrar entrada" : disabledReason}
+            title={canOpenCreateDialog ? "Registrar sintomas" : disabledReason}
             onClick={handleOpenCreateSymptomLogDialog}
           >
             <Plus aria-hidden="true" />
-            Registrar entrada
+            Registrar sintomas
           </Button>
         </div>
       )}
@@ -356,8 +356,8 @@ export function SymptomsPanel() {
         size="icon"
         className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
         disabled={!canOpenCreateDialog}
-        title={canOpenCreateDialog ? "Registrar entrada" : disabledReason}
-        aria-label="Registrar entrada"
+        title={canOpenCreateDialog ? "Registrar sintomas" : disabledReason}
+        aria-label="Registrar sintomas"
         onClick={handleOpenCreateSymptomLogDialog}
       >
         <Plus aria-hidden="true" />

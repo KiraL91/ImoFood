@@ -170,7 +170,7 @@ export function SymptomLogFormDialog({
       description={
         isDisabled
           ? (disabledReason ?? "Tu rol no permite modificar sintomas.")
-          : "Guarda una entrada con puntuaciones de 0 a 10."
+          : "Registra como te sientes ahora y asocialo a una ingesta previa si aplica."
       }
     >
       <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
@@ -196,27 +196,32 @@ export function SymptomLogFormDialog({
           />
         </label>
 
-        <label className="space-y-2 text-sm font-medium">
-          Comida relacionada
-          <select
-            value={formState.mealLogId}
-            onChange={(event) =>
-              setFormState((current) => ({
-                ...current,
-                mealLogId: event.target.value,
-              }))
-            }
-            className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={disabled || isMealLogsLoading}
-          >
-            <option value="">Sin comida relacionada</option>
-            {mealLogs.map((mealLog) => (
-              <option key={mealLog.id} value={mealLog.id}>
-                {mealLog.description} - {formatDateTime(mealLog.consumedAt)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="space-y-2">
+          <label className="space-y-2 text-sm font-medium">
+            Ingesta relacionada
+            <select
+              value={formState.mealLogId}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  mealLogId: event.target.value,
+                }))
+              }
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={disabled || isMealLogsLoading}
+            >
+              <option value="">Sin ingesta relacionada</option>
+              {mealLogs.map((mealLog) => (
+                <option key={mealLog.id} value={mealLog.id}>
+                  {mealLog.description} - {formatDateTime(mealLog.consumedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-xs leading-5 text-muted-foreground">
+            Selecciona una ingesta ya registrada si el sintoma parece relacionado.
+          </p>
+        </div>
 
         {scoreFields.map((field) => (
           <label key={field.key} className="space-y-2 text-sm font-medium">

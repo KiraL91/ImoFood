@@ -138,11 +138,11 @@ export function MealLogFormDialog({
     <Dialog
       open={isOpen}
       onOpenChange={handleOpenChange}
-      title={isEditing ? "Editar comida" : "Registrar comida"}
+      title={isEditing ? "Editar ingesta" : "Registrar ingesta"}
       description={
         isDisabled
           ? (disabledReason ?? "Tu rol no permite modificar el historial.")
-          : "Guarda comidas consumidas en el historial."
+          : "Guarda que comiste y cuando. Los sintomas se registran aparte si aparecen."
       }
     >
       <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
@@ -169,14 +169,14 @@ export function MealLogFormDialog({
         </label>
 
         <label className="space-y-2 text-sm font-medium">
-          Receta asociada
+          Receta de origen
           <select
             value={formState.recipeId}
             onChange={(event) => handleRecipeChange(event.target.value)}
             className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             disabled={disabled || isRecipesLoading}
           >
-            <option value="">Sin receta asociada</option>
+            <option value="">Sin receta de origen</option>
             {recipes.map((recipe) => (
               <option key={recipe.id} value={recipe.id}>
                 {recipe.name}
@@ -186,7 +186,7 @@ export function MealLogFormDialog({
         </label>
 
         <label className="space-y-2 text-sm font-medium">
-          Descripcion
+          Que comiste
           <Input
             value={formState.description}
             onChange={(event) =>
@@ -209,7 +209,7 @@ export function MealLogFormDialog({
               setFormState((current) => ({ ...current, notes: event.target.value }))
             }
             className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            placeholder="Contexto, cantidad aproximada o tolerancia percibida"
+            placeholder="Cantidad aproximada, contexto o cambios relevantes"
             disabled={disabled}
           />
         </label>
@@ -221,7 +221,7 @@ export function MealLogFormDialog({
               ? "Guardando..."
               : isEditing
                 ? "Guardar cambios"
-                : "Guardar comida"}
+                : "Guardar ingesta"}
           </Button>
           <Button
             type="button"

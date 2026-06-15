@@ -39,13 +39,13 @@ export const navigationItems: NavigationItem[] = [
   {
     href: "/meal-ideas",
     label: "Ideas",
-    description: "Combinaciones rápidas para decidir comida",
+    description: "Combinaciones rapidas para decidir comida",
     icon: Lightbulb,
   },
   {
     href: "/meal-logs",
     label: "Historial",
-    description: "Comidas registradas para correlacionar con síntomas.",
+    description: "Ingestas registradas y sintomas posteriores",
     icon: History,
   },
   {
@@ -56,14 +56,14 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     href: "/symptoms",
-    label: "Síntomas",
-    description: "Registro clínico para una fase posterior",
+    label: "Sintomas",
+    description: "Diario posterior asociado a ingestas",
     icon: Activity,
   },
   {
     href: "/settings",
     label: "Ajustes",
-    description: "Preferencias y estado de integración",
+    description: "Preferencias y estado de integracion",
     icon: Settings,
   },
 ];

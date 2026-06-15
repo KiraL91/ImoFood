@@ -100,7 +100,7 @@ export function MealLogCard({
                   type="button"
                   size="icon"
                   variant="ghost"
-                  title="Editar comida"
+                  title="Editar ingesta"
                   onClick={() => onEdit?.(mealLog)}
                 >
                   <Pencil aria-hidden="true" />
@@ -111,7 +111,7 @@ export function MealLogCard({
                   type="button"
                   size="icon"
                   variant="ghost"
-                  title="Borrar comida"
+                  title="Borrar ingesta"
                   onClick={() => onDelete?.(mealLog)}
                   disabled={isDeleting}
                 >
@@ -134,12 +134,13 @@ export function MealLogCard({
           <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5 font-medium text-foreground">
               <Activity className="size-4 shrink-0" aria-hidden="true" />
-              <span>Sintomas asociados: {symptomLogs.length}</span>
+              <span>Sintomas posteriores</span>
             </div>
             <div className="mt-2 grid gap-1 pl-5 text-xs">
+              <span>Entradas asociadas: {symptomLogs.length}</span>
               {highestSymptomSignal && (
                 <span>
-                  Maximo: {highestSymptomSignal.label} {highestSymptomSignal.score}
+                  Pico maximo: {highestSymptomSignal.label} {highestSymptomSignal.score}
                   /10
                 </span>
               )}
@@ -165,7 +166,7 @@ export function MealLogCard({
             onClick={() => onRegisterSymptoms?.(mealLog)}
           >
             <Plus aria-hidden="true" />
-            Registrar sintomas
+            Anadir sintomas posteriores
           </Button>
         )}
       </CardContent>

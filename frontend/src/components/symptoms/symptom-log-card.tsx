@@ -90,7 +90,7 @@ export function SymptomLogCard({
           <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5 font-medium text-foreground">
               <Utensils className="size-4 shrink-0" aria-hidden="true" />
-              <span className="truncate">{symptomLog.mealLog.description}</span>
+              <span className="truncate">Ingesta: {symptomLog.mealLog.description}</span>
             </div>
             <p className="mt-1 pl-5 text-xs">
               {formatDateTime(symptomLog.mealLog.consumedAt)}

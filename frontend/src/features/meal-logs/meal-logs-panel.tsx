@@ -112,8 +112,8 @@ export function MealLogsPanel() {
     : !isAuthenticated
       ? "Inicia sesion para usar el CRUD real de historial."
       : editingMealLog
-        ? "Tu rol no permite editar comidas."
-        : "Tu rol no permite registrar comidas.";
+        ? "Tu rol no permite editar ingestas."
+        : "Tu rol no permite registrar ingestas.";
   const canOpenCreateDialog = hasBackendConfigured && isAuthenticated && canCreateMealLog;
   const canRegisterSymptoms =
     hasBackendConfigured && isAuthenticated && canCreateSymptomLog;
@@ -229,19 +229,19 @@ export function MealLogsPanel() {
 
       <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Historial de comidas</h3>
+          <h3 className="text-lg font-semibold">Ingestas registradas</h3>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Comidas registradas para correlacionar con sintomas.
+            Registra lo comido; los sintomas se asocian despues si aparecen.
           </p>
         </div>
         <Button
           type="button"
           disabled={!canOpenCreateDialog}
-          title={canOpenCreateDialog ? "Registrar comida" : disabledReason}
+          title={canOpenCreateDialog ? "Registrar ingesta" : disabledReason}
           onClick={handleOpenCreateMealLogDialog}
         >
           <Plus aria-hidden="true" />
-          Registrar comida
+          Registrar ingesta
         </Button>
       </section>
 
@@ -263,9 +263,9 @@ export function MealLogsPanel() {
               aria-hidden="true"
             />
             <div>
-              <h4 className="text-sm font-medium">Buscar por rango de fechas</h4>
+              <h4 className="text-sm font-medium">Buscar ingestas por fecha</h4>
               <p className="mt-1 text-sm text-muted-foreground">
-                Filtra las comidas por fecha de consumo.
+                Filtra por fecha de consumo.
               </p>
             </div>
           </div>
@@ -342,7 +342,7 @@ export function MealLogsPanel() {
 
       {mealLogsQuery.isLoading && (
         <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-          Cargando historial...
+          Cargando ingestas...
         </div>
       )}
 
@@ -369,8 +369,8 @@ export function MealLogsPanel() {
       {!mealLogsQuery.isLoading && filteredMealLogs.length === 0 && (
         <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
           {hasDateFilter
-            ? "No hay comidas registradas en ese rango de fechas."
-            : "Todavia no hay comidas registradas."}
+            ? "No hay ingestas registradas en ese rango de fechas."
+            : "Todavia no hay ingestas registradas."}
         </div>
       )}
 
@@ -379,8 +379,8 @@ export function MealLogsPanel() {
         size="icon"
         className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
         disabled={!canOpenCreateDialog}
-        title={canOpenCreateDialog ? "Registrar comida" : disabledReason}
-        aria-label="Registrar comida"
+        title={canOpenCreateDialog ? "Registrar ingesta" : disabledReason}
+        aria-label="Registrar ingesta"
         onClick={handleOpenCreateMealLogDialog}
       >
         <Plus aria-hidden="true" />
