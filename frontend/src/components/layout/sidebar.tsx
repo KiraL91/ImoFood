@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Leaf } from "lucide-react";
-import { navigationItems } from "@/lib/constants/navigation";
+import { isNavigationItemActive, navigationGroups } from "@/lib/constants/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -22,33 +22,49 @@ export function Sidebar() {
           <h1 className="text-lg font-semibold leading-6">Plan diario</h1>
         </div>
       </div>
-      <nav className="flex flex-1 flex-col gap-2 px-4 py-5" aria-label="Principal">
-        {navigationItems.map((item) => {
-          const isActive =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          const Icon = item.icon;
+      <nav
+        className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 py-5"
+        aria-label="Principal"
+      >
+        {navigationGroups.map((group) => (
+          <section key={group.id} className="space-y-2">
+            <div className="px-3">
+              <h2 className="text-xs font-semibold uppercase text-muted-foreground">
+                {group.label}
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {group.description}
+              </p>
+            </div>
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const isActive = isNavigationItemActive(pathname, item);
+                const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-start gap-3 rounded-lg px-3 py-3 text-sm transition-colors",
-                isActive
-                  ? "bg-secondary text-secondary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              <span className="min-w-0">
-                <span className="block font-medium">{item.label}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
-                  {item.description}
-                </span>
-              </span>
-            </Link>
-          );
-        })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg px-3 py-3 text-sm transition-colors",
+                      isActive
+                        ? "bg-secondary text-secondary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                    <span className="min-w-0">
+                      <span className="block font-medium">{item.label}</span>
+                      <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                        {item.description}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </nav>
       <div className="border-t px-6 py-5">
         {isAuthenticated && user ? (

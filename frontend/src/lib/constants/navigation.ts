@@ -17,61 +17,161 @@ export type NavigationItem = {
   icon: LucideIcon;
 };
 
+export type NavigationGroup = {
+  id: string;
+  label: string;
+  description: string;
+  items: NavigationItem[];
+};
+
+export type MobileNavigationItem =
+  | (NavigationItem & {
+      type: "link";
+    })
+  | {
+      type: "group";
+      id: string;
+      label: string;
+      description: string;
+      icon: LucideIcon;
+      items: NavigationItem[];
+    };
+
+const todayItem: NavigationItem = {
+  href: "/",
+  label: "Hoy",
+  description: "Resumen rapido y accesos principales",
+  icon: LayoutDashboard,
+};
+
+const foodsItem: NavigationItem = {
+  href: "/foods",
+  label: "Alimentos",
+  description: "Estados y tolerancias personales",
+  icon: Apple,
+};
+
+const recipesItem: NavigationItem = {
+  href: "/recipes",
+  label: "Recetas",
+  description: "Preparaciones compatibles con tu fase",
+  icon: CookingPot,
+};
+
+const mealIdeasItem: NavigationItem = {
+  href: "/meal-ideas",
+  label: "Ideas",
+  description: "Combinaciones rapidas para decidir comida",
+  icon: Lightbulb,
+};
+
+const mealLogsItem: NavigationItem = {
+  href: "/meal-logs",
+  label: "Mi diario",
+  description: "Ingestas registradas y sintomas posteriores",
+  icon: History,
+};
+
+const treatmentsItem: NavigationItem = {
+  href: "/treatments",
+  label: "Tratamientos",
+  description: "Seguimiento de medicacion y tratamientos relacionados",
+  icon: Pill,
+};
+
+const symptomsItem: NavigationItem = {
+  href: "/symptoms",
+  label: "Sintomas",
+  description: "Diario posterior asociado a ingestas",
+  icon: Activity,
+};
+
+const settingsItem: NavigationItem = {
+  href: "/settings",
+  label: "Ajustes",
+  description: "Preferencias y estado de integracion",
+  icon: Settings,
+};
+
 export const navigationItems: NavigationItem[] = [
+  todayItem,
+  foodsItem,
+  recipesItem,
+  mealIdeasItem,
+  mealLogsItem,
+  treatmentsItem,
+  symptomsItem,
+  settingsItem,
+];
+
+export const navigationGroups: NavigationGroup[] = [
   {
-    href: "/",
-    label: "Dashboard",
-    description: "Resumen de alimentos, recetas y sugerencias",
-    icon: LayoutDashboard,
+    id: "tracking",
+    label: "Seguimiento",
+    description: "Registrar y revisar lo que ocurre cada dia",
+    items: [todayItem, mealLogsItem, symptomsItem],
   },
   {
-    href: "/foods",
-    label: "Alimentos",
-    description: "Estados y tolerancias personales",
-    icon: Apple,
+    id: "food",
+    label: "Comida",
+    description: "Consultar, preparar y decidir que comer",
+    items: [foodsItem, recipesItem, mealIdeasItem],
   },
   {
-    href: "/recipes",
-    label: "Recetas",
-    description: "Preparaciones compatibles con tu fase",
-    icon: CookingPot,
+    id: "support",
+    label: "Soporte",
+    description: "Tratamientos y contexto complementario",
+    items: [treatmentsItem],
   },
   {
-    href: "/meal-ideas",
-    label: "Ideas",
-    description: "Combinaciones rapidas para decidir comida",
-    icon: Lightbulb,
-  },
-  {
-    href: "/meal-logs",
-    label: "Historial",
-    description: "Ingestas registradas y sintomas posteriores",
-    icon: History,
-  },
-  {
-    href: "/treatments",
-    label: "Tratamientos",
-    description: "Seguimiento de medicacion y tratamientos relacionados",
-    icon: Pill,
-  },
-  {
-    href: "/symptoms",
-    label: "Sintomas",
-    description: "Diario posterior asociado a ingestas",
-    icon: Activity,
-  },
-  {
-    href: "/settings",
-    label: "Ajustes",
-    description: "Preferencias y estado de integracion",
-    icon: Settings,
+    id: "system",
+    label: "Sistema",
+    description: "Preferencias e integraciones",
+    items: [settingsItem],
   },
 ];
 
+export const mobileNavigationItems: MobileNavigationItem[] = [
+  {
+    ...todayItem,
+    type: "link",
+  },
+  {
+    id: "diary",
+    type: "group",
+    label: "Mi diario",
+    description: "Ingestas y sintomas",
+    icon: History,
+    items: [mealLogsItem, symptomsItem],
+  },
+  {
+    id: "library",
+    type: "group",
+    label: "Biblioteca",
+    description: "Alimentos, recetas e ideas",
+    icon: CookingPot,
+    items: [foodsItem, recipesItem, mealIdeasItem],
+  },
+  {
+    ...treatmentsItem,
+    type: "link",
+    label: "Tratamiento",
+  },
+  {
+    ...settingsItem,
+    type: "link",
+    label: "Mas",
+    description: "Ajustes y preferencias",
+  },
+];
+
+export function isNavigationItemActive(pathname: string, item: NavigationItem) {
+  return item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+}
+
 export function getNavigationItem(pathname: string) {
   return (
-    navigationItems.find((item) =>
-      item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
-    ) ?? navigationItems[0]
+    navigationItems.find((item) => isNavigationItemActive(pathname, item)) ??
+    navigationItems[0]
   );
 }
