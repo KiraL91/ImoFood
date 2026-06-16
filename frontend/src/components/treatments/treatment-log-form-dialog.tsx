@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import type { CreateTreatmentLogInput } from "@/features/treatments/treatments-a
 import { treatmentTimingMeta } from "@/lib/constants/treatments";
 import type { MealLog } from "@/lib/types/meal-log";
 import type { SymptomLog } from "@/lib/types/symptom-log";
-import type { Treatment, TreatmentLogTiming } from "@/lib/types/treatment";
+import type { Treatment, TreatmentLog, TreatmentLogTiming } from "@/lib/types/treatment";
 import { formatDateTime } from "@/lib/utils/format-date";
 
 type TreatmentLogFormState = {
@@ -25,10 +25,12 @@ type TreatmentLogFormState = {
 type TreatmentLogFormDialogProps = {
   disabledReason?: string;
   errorMessage?: string | null;
+  initialTreatmentLog?: TreatmentLog;
   isDisabled?: boolean;
   isOpen: boolean;
   isSubmitting?: boolean;
   mealLogs: MealLog[];
+  mode?: "create" | "edit";
   onCancel?: () => void;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (input: CreateTreatmentLogInput) => Promise<void> | void;
@@ -59,6 +61,25 @@ function toEmptyFormState(treatments: Treatment[]): TreatmentLogFormState {
   };
 }
 
+function toFormState(
+  treatments: Treatment[],
+  treatmentLog?: TreatmentLog,
+): TreatmentLogFormState {
+  if (!treatmentLog) {
+    return toEmptyFormState(treatments);
+  }
+
+  return {
+    dose: treatmentLog.dose ?? "",
+    notes: treatmentLog.notes ?? "",
+    relatedMealLogId: treatmentLog.relatedMealLogId ?? "",
+    relatedSymptomLogId: treatmentLog.relatedSymptomLogId ?? "",
+    takenAt: toDateTimeLocalValue(new Date(treatmentLog.takenAt)),
+    timing: treatmentLog.timing ?? "with-meal",
+    treatmentId: treatmentLog.treatmentId,
+  };
+}
+
 function toTreatmentLogInput(formState: TreatmentLogFormState): CreateTreatmentLogInput {
   return {
     dose: formState.dose.trim() || undefined,
@@ -74,25 +95,31 @@ function toTreatmentLogInput(formState: TreatmentLogFormState): CreateTreatmentL
 export function TreatmentLogFormDialog({
   disabledReason,
   errorMessage,
+  initialTreatmentLog,
   isDisabled = false,
   isOpen,
   isSubmitting = false,
   mealLogs,
+  mode = "create",
   onCancel,
   onOpenChange,
   onSubmit,
   symptomLogs,
   treatments,
 }: TreatmentLogFormDialogProps) {
-  const emptyFormState = useMemo(() => toEmptyFormState(treatments), [treatments]);
-  const [formState, setFormState] = useState(emptyFormState);
+  const initialFormState = useMemo(
+    () => toFormState(treatments, initialTreatmentLog),
+    [initialTreatmentLog, treatments],
+  );
+  const [formState, setFormState] = useState(initialFormState);
   const disabled = isDisabled || isSubmitting;
+  const isEditing = mode === "edit";
 
   useEffect(() => {
     if (isOpen) {
-      setFormState(emptyFormState);
+      setFormState(initialFormState);
     }
-  }, [emptyFormState, isOpen]);
+  }, [initialFormState, isOpen]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,12 +143,14 @@ export function TreatmentLogFormDialog({
     <Dialog
       open={isOpen}
       onOpenChange={handleOpenChange}
-      title="Registrar toma"
+      title={isEditing ? "Editar toma" : "Registrar toma"}
       description={
         isDisabled
           ? (disabledReason ??
             "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend.")
-          : "Registra una toma para poder cruzarla despues con comidas y sintomas."
+          : isEditing
+            ? "Actualiza la toma registrada y sus relaciones de seguimiento."
+            : "Registra una toma para poder cruzarla despues con comidas y sintomas."
       }
     >
       <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -270,8 +299,12 @@ export function TreatmentLogFormDialog({
             type="submit"
             disabled={disabled || !formState.treatmentId || treatments.length === 0}
           >
-            <Plus aria-hidden="true" />
-            {isSubmitting ? "Guardando..." : "Guardar toma"}
+            {isEditing ? <Save aria-hidden="true" /> : <Plus aria-hidden="true" />}
+            {isSubmitting
+              ? "Guardando..."
+              : isEditing
+                ? "Guardar cambios"
+                : "Guardar toma"}
           </Button>
           <Button
             type="button"

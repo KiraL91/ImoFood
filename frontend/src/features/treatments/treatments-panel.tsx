@@ -19,12 +19,14 @@ import {
   useCreateTreatment,
   useCreateTreatmentLog,
   useDeleteTreatment,
+  useDeleteTreatmentLog,
   useTreatmentLogs,
   useTreatments,
   useUpdateTreatment,
+  useUpdateTreatmentLog,
 } from "@/features/treatments/treatments-queries";
 import { env } from "@/lib/env";
-import type { Treatment } from "@/lib/types/treatment";
+import type { Treatment, TreatmentLog } from "@/lib/types/treatment";
 import { useAuth } from "@/providers/auth-provider";
 
 function getErrorMessage(error: unknown) {
@@ -38,6 +40,9 @@ export function TreatmentsPanel() {
   const [isTreatmentDialogOpen, setIsTreatmentDialogOpen] = useState(false);
   const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
   const [editingTreatment, setEditingTreatment] = useState<Treatment | undefined>();
+  const [editingTreatmentLog, setEditingTreatmentLog] = useState<
+    TreatmentLog | undefined
+  >();
   const [mutationError, setMutationError] = useState<string | null>(null);
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
@@ -45,6 +50,8 @@ export function TreatmentsPanel() {
   const canUpdateTreatment = hasPermission("treatments:update");
   const canDeleteTreatment = hasPermission("treatments:delete");
   const canCreateTreatmentLog = hasPermission("treatment-logs:create");
+  const canUpdateTreatmentLog = hasPermission("treatment-logs:update");
+  const canDeleteTreatmentLog = hasPermission("treatment-logs:delete");
   const treatmentsQuery = useTreatments();
   const treatmentLogsQuery = useTreatmentLogs();
   const mealLogsQuery = useMealLogs();
@@ -53,6 +60,8 @@ export function TreatmentsPanel() {
   const updateTreatmentMutation = useUpdateTreatment();
   const deleteTreatmentMutation = useDeleteTreatment();
   const createTreatmentLogMutation = useCreateTreatmentLog();
+  const updateTreatmentLogMutation = useUpdateTreatmentLog();
+  const deleteTreatmentLogMutation = useDeleteTreatmentLog();
   const treatments = useMemo(
     () => (hasBackendConfigured && !isAuthenticated ? [] : (treatmentsQuery.data ?? [])),
     [hasBackendConfigured, isAuthenticated, treatmentsQuery.data],
@@ -83,6 +92,13 @@ export function TreatmentsPanel() {
     isAuthenticated &&
     canCreateTreatmentLog &&
     treatments.length > 0;
+  const isTreatmentLogSubmitting =
+    createTreatmentLogMutation.isPending || updateTreatmentLogMutation.isPending;
+  const isTreatmentLogFormDisabled =
+    !hasBackendConfigured ||
+    !isAuthenticated ||
+    treatments.length === 0 ||
+    (editingTreatmentLog ? !canUpdateTreatmentLog : !canCreateTreatmentLog);
   const treatmentDisabledReason = !hasBackendConfigured
     ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend."
     : !isAuthenticated
@@ -96,7 +112,9 @@ export function TreatmentsPanel() {
       ? "Inicia sesion para registrar tomas."
       : treatments.length === 0
         ? "Crea primero un tratamiento para poder registrar tomas."
-        : "Tu rol no permite registrar tomas.";
+        : editingTreatmentLog
+          ? "Tu rol no permite editar tomas."
+          : "Tu rol no permite registrar tomas.";
 
   const treatmentNameById = useMemo(
     () => new Map(treatments.map((treatment) => [treatment.id, treatment.name])),
@@ -162,6 +180,16 @@ export function TreatmentsPanel() {
     setMutationError(null);
 
     try {
+      if (editingTreatmentLog) {
+        await updateTreatmentLogMutation.mutateAsync({
+          id: editingTreatmentLog.id,
+          input,
+        });
+        setEditingTreatmentLog(undefined);
+        setIsLogDialogOpen(false);
+        return;
+      }
+
       await createTreatmentLogMutation.mutateAsync(input);
       setIsLogDialogOpen(false);
     } catch (error) {
@@ -181,6 +209,18 @@ export function TreatmentsPanel() {
     setIsTreatmentDialogOpen(true);
   }
 
+  function handleOpenCreateTreatmentLogDialog() {
+    setMutationError(null);
+    setEditingTreatmentLog(undefined);
+    setIsLogDialogOpen(true);
+  }
+
+  function handleOpenEditTreatmentLogDialog(treatmentLog: TreatmentLog) {
+    setMutationError(null);
+    setEditingTreatmentLog(treatmentLog);
+    setIsLogDialogOpen(true);
+  }
+
   function handleTreatmentDialogOpenChange(open: boolean) {
     setIsTreatmentDialogOpen(open);
 
@@ -194,6 +234,7 @@ export function TreatmentsPanel() {
     setIsLogDialogOpen(open);
 
     if (!open) {
+      setEditingTreatmentLog(undefined);
       setMutationError(null);
     }
   }
@@ -213,6 +254,28 @@ export function TreatmentsPanel() {
       if (editingTreatment?.id === treatment.id) {
         setEditingTreatment(undefined);
         setIsTreatmentDialogOpen(false);
+      }
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
+    }
+  }
+
+  async function handleDeleteTreatmentLog(treatmentLog: TreatmentLog) {
+    const treatmentName = treatmentNameById.get(treatmentLog.treatmentId) ?? "esta toma";
+    const confirmed = window.confirm(`Borrar la toma de "${treatmentName}"?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setMutationError(null);
+
+    try {
+      await deleteTreatmentLogMutation.mutateAsync(treatmentLog.id);
+
+      if (editingTreatmentLog?.id === treatmentLog.id) {
+        setEditingTreatmentLog(undefined);
+        setIsLogDialogOpen(false);
       }
     } catch (error) {
       setMutationError(getErrorMessage(error));
@@ -240,11 +303,16 @@ export function TreatmentsPanel() {
       <TreatmentLogFormDialog
         disabledReason={logDisabledReason}
         errorMessage={mutationError}
-        isDisabled={!canOpenLogDialog}
+        initialTreatmentLog={editingTreatmentLog}
+        isDisabled={isTreatmentLogFormDisabled}
         isOpen={isLogDialogOpen}
-        isSubmitting={createTreatmentLogMutation.isPending}
+        isSubmitting={isTreatmentLogSubmitting}
         mealLogs={mealLogs}
-        onCancel={() => setMutationError(null)}
+        mode={editingTreatmentLog ? "edit" : "create"}
+        onCancel={() => {
+          setEditingTreatmentLog(undefined);
+          setMutationError(null);
+        }}
         onOpenChange={handleLogDialogOpenChange}
         onSubmit={handleTreatmentLogSubmit}
         symptomLogs={symptomLogs}
@@ -295,7 +363,7 @@ export function TreatmentsPanel() {
             type="button"
             disabled={!canOpenLogDialog}
             title={canOpenLogDialog ? "Registrar toma" : logDisabledReason}
-            onClick={() => setIsLogDialogOpen(true)}
+            onClick={handleOpenCreateTreatmentLogDialog}
           >
             <Plus aria-hidden="true" />
             Registrar toma
@@ -421,6 +489,14 @@ export function TreatmentsPanel() {
                   ? symptomDateById.get(treatmentLog.relatedSymptomLogId)
                   : undefined
               }
+              canDelete={hasBackendConfigured && isAuthenticated && canDeleteTreatmentLog}
+              canEdit={hasBackendConfigured && isAuthenticated && canUpdateTreatmentLog}
+              isDeleting={
+                deleteTreatmentLogMutation.isPending &&
+                deleteTreatmentLogMutation.variables === treatmentLog.id
+              }
+              onDelete={handleDeleteTreatmentLog}
+              onEdit={handleOpenEditTreatmentLogDialog}
             />
           ))}
         </div>
