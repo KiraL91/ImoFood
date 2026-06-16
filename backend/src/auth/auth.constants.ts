@@ -19,6 +19,14 @@ export const permissions = [
   "symptom-logs:create",
   "symptom-logs:update",
   "symptom-logs:delete",
+  "treatments:read",
+  "treatments:create",
+  "treatments:update",
+  "treatments:delete",
+  "treatment-logs:read",
+  "treatment-logs:create",
+  "treatment-logs:update",
+  "treatment-logs:delete",
 ] as const;
 
 export type Permission = (typeof permissions)[number];
@@ -41,6 +49,14 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     "symptom-logs:create",
     "symptom-logs:update",
     "symptom-logs:delete",
+    "treatments:read",
+    "treatments:create",
+    "treatments:update",
+    "treatments:delete",
+    "treatment-logs:read",
+    "treatment-logs:create",
+    "treatment-logs:update",
+    "treatment-logs:delete",
   ],
   [UserRole.member]: [
     "foods:read",
@@ -55,12 +71,20 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     "symptom-logs:read",
     "symptom-logs:create",
     "symptom-logs:update",
+    "treatments:read",
+    "treatments:create",
+    "treatments:update",
+    "treatment-logs:read",
+    "treatment-logs:create",
+    "treatment-logs:update",
   ],
   [UserRole.readonly]: [
     "foods:read",
     "recipes:read",
     "meal-logs:read",
     "symptom-logs:read",
+    "treatments:read",
+    "treatment-logs:read",
   ],
 };
 

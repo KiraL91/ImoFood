@@ -66,6 +66,7 @@ model MealLog {
   updatedAt   DateTime @updatedAt
   symptomLogs SymptomLog[]
   foods       MealLogFood[]
+  treatmentLogs TreatmentLog[]
 
   @@index([consumedAt])
   @@index([recipeId])
@@ -96,9 +97,48 @@ model SymptomLog {
   mealLog   MealLog? @relation(fields: [mealLogId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  treatmentLogs TreatmentLog[]
 
   @@index([loggedAt])
   @@index([mealLogId])
+}
+
+model Treatment {
+  id        String   @id @default(cuid())
+  name      String
+  category  String
+  targets   String[]
+  status    String
+  startDate DateTime?
+  endDate   DateTime?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  logs      TreatmentLog[]
+
+  @@index([category])
+  @@index([status])
+}
+
+model TreatmentLog {
+  id                  String      @id @default(cuid())
+  treatmentId         String
+  treatment           Treatment   @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  takenAt             DateTime
+  dose                String?
+  timing              String?
+  relatedMealLogId    String?
+  relatedMealLog      MealLog?    @relation(fields: [relatedMealLogId], references: [id], onDelete: SetNull)
+  relatedSymptomLogId String?
+  relatedSymptomLog   SymptomLog? @relation(fields: [relatedSymptomLogId], references: [id], onDelete: SetNull)
+  notes               String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([takenAt])
+  @@index([treatmentId])
+  @@index([relatedMealLogId])
+  @@index([relatedSymptomLogId])
 }
 
 model AppUser {

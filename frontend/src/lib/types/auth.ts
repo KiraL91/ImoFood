@@ -16,7 +16,15 @@ export type Permission =
   | "symptom-logs:read"
   | "symptom-logs:create"
   | "symptom-logs:update"
-  | "symptom-logs:delete";
+  | "symptom-logs:delete"
+  | "treatments:read"
+  | "treatments:create"
+  | "treatments:update"
+  | "treatments:delete"
+  | "treatment-logs:read"
+  | "treatment-logs:create"
+  | "treatment-logs:update"
+  | "treatment-logs:delete";
 
 export type AuthUser = {
   displayName?: string;
