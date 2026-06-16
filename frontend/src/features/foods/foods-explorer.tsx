@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Plus, Search, Server } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FoodCard } from "@/components/foods/food-card";
 import { FoodFormDialog } from "@/components/foods/food-form-dialog";
 import { Button } from "@/components/ui/button";
@@ -33,11 +34,13 @@ export function FoodsExplorer() {
   const [isFoodDialogOpen, setIsFoodDialogOpen] = useState(false);
   const [editingFood, setEditingFood] = useState<Food | undefined>();
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const router = useRouter();
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
   const canCreateFood = hasPermission("foods:create");
   const canUpdateFood = hasPermission("foods:update");
   const canDeleteFood = hasPermission("foods:delete");
+  const canCreateMealLog = hasPermission("meal-logs:create");
   const foodsQuery = useFoods();
   const createFoodMutation = useCreateFood();
   const updateFoodMutation = useUpdateFood();
@@ -52,6 +55,7 @@ export function FoodsExplorer() {
     !isAuthenticated ||
     (editingFood ? !canUpdateFood : !canCreateFood);
   const canOpenCreateDialog = hasBackendConfigured && isAuthenticated && canCreateFood;
+  const canRegisterMealLog = hasBackendConfigured && isAuthenticated && canCreateMealLog;
   const disabledReason = !hasBackendConfigured
     ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend."
     : !isAuthenticated
@@ -136,6 +140,10 @@ export function FoodsExplorer() {
     } catch (error) {
       setMutationError(getErrorMessage(error));
     }
+  }
+
+  function handleRegisterMeal(food: Food) {
+    router.push(`/meal-logs?foodId=${food.id}`);
   }
 
   return (
@@ -260,12 +268,14 @@ export function FoodsExplorer() {
             key={food.id}
             canDelete={hasBackendConfigured && isAuthenticated && canDeleteFood}
             canEdit={hasBackendConfigured && isAuthenticated && canUpdateFood}
+            canRegisterMeal={canRegisterMealLog}
             food={food}
             isDeleting={
               deleteFoodMutation.isPending && deleteFoodMutation.variables === food.id
             }
             onDelete={handleDeleteFood}
             onEdit={handleOpenEditFoodDialog}
+            onRegisterMeal={handleRegisterMeal}
           />
         ))}
       </section>

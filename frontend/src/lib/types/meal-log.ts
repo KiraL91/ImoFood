@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { foodStatusSchema } from "@/lib/types/food";
 
 export const mealLogSchema = z.object({
   id: z.string(),
@@ -6,6 +7,17 @@ export const mealLogSchema = z.object({
   description: z.string(),
   notes: z.string().optional(),
   recipeId: z.string().optional(),
+  foodIds: z.array(z.string()).optional(),
+  foods: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        category: z.string().optional(),
+        status: foodStatusSchema.optional(),
+      }),
+    )
+    .optional(),
   recipe: z
     .object({
       id: z.string(),

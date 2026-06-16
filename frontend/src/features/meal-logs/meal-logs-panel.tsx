@@ -7,6 +7,7 @@ import { MealLogCard } from "@/components/meal-logs/meal-log-card";
 import { MealLogFormDialog } from "@/components/meal-logs/meal-log-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useFoods } from "@/features/foods/foods-queries";
 import type { CreateMealLogInput } from "@/features/meal-logs/meal-logs-api";
 import {
   useCreateMealLog,
@@ -30,12 +31,14 @@ function getErrorMessage(error: unknown) {
 export function MealLogsPanel() {
   const [isMealLogDialogOpen, setIsMealLogDialogOpen] = useState(false);
   const [editingMealLog, setEditingMealLog] = useState<MealLog | undefined>();
+  const [prefilledFoodId, setPrefilledFoodId] = useState<string | null>(null);
   const [prefilledRecipeId, setPrefilledRecipeId] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [mutationError, setMutationError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const foodIdFromQuery = searchParams.get("foodId");
   const recipeIdFromQuery = searchParams.get("recipeId");
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
@@ -48,6 +51,7 @@ export function MealLogsPanel() {
   const createMealLogMutation = useCreateMealLog();
   const updateMealLogMutation = useUpdateMealLog();
   const deleteMealLogMutation = useDeleteMealLog();
+  const foodsQuery = useFoods();
   const recipesQuery = useRecipes();
   const mealLogs = useMemo(
     () => (hasBackendConfigured && !isAuthenticated ? [] : (mealLogsQuery.data ?? [])),
@@ -56,6 +60,10 @@ export function MealLogsPanel() {
   const recipes = useMemo(
     () => (hasBackendConfigured && !isAuthenticated ? [] : (recipesQuery.data ?? [])),
     [hasBackendConfigured, isAuthenticated, recipesQuery.data],
+  );
+  const foods = useMemo(
+    () => (hasBackendConfigured && !isAuthenticated ? [] : (foodsQuery.data ?? [])),
+    [foodsQuery.data, hasBackendConfigured, isAuthenticated],
   );
   const symptomLogs = useMemo(
     () => (hasBackendConfigured && !isAuthenticated ? [] : (symptomLogsQuery.data ?? [])),
@@ -102,6 +110,10 @@ export function MealLogsPanel() {
     () => recipes.find((recipe) => recipe.id === prefilledRecipeId),
     [prefilledRecipeId, recipes],
   );
+  const prefilledFood = useMemo(
+    () => foods.find((food) => food.id === prefilledFoodId),
+    [foods, prefilledFoodId],
+  );
   const isSubmitting = createMealLogMutation.isPending || updateMealLogMutation.isPending;
   const isFormDisabled =
     !hasBackendConfigured ||
@@ -119,16 +131,17 @@ export function MealLogsPanel() {
     hasBackendConfigured && isAuthenticated && canCreateSymptomLog;
 
   useEffect(() => {
-    if (!recipeIdFromQuery) {
+    if (!foodIdFromQuery && !recipeIdFromQuery) {
       return;
     }
 
     setEditingMealLog(undefined);
+    setPrefilledFoodId(foodIdFromQuery);
     setPrefilledRecipeId(recipeIdFromQuery);
     setMutationError(null);
     setIsMealLogDialogOpen(true);
     router.replace("/meal-logs");
-  }, [recipeIdFromQuery, router]);
+  }, [foodIdFromQuery, recipeIdFromQuery, router]);
 
   async function handleMealLogSubmit(input: CreateMealLogInput) {
     setMutationError(null);
@@ -145,6 +158,7 @@ export function MealLogsPanel() {
       }
 
       await createMealLogMutation.mutateAsync(input);
+      setPrefilledFoodId(null);
       setPrefilledRecipeId(null);
       setIsMealLogDialogOpen(false);
     } catch (error) {
@@ -174,6 +188,7 @@ export function MealLogsPanel() {
 
   function handleOpenCreateMealLogDialog() {
     setMutationError(null);
+    setPrefilledFoodId(null);
     setPrefilledRecipeId(null);
     setEditingMealLog(undefined);
     setIsMealLogDialogOpen(true);
@@ -181,6 +196,7 @@ export function MealLogsPanel() {
 
   function handleEditMealLog(mealLog: MealLog) {
     setMutationError(null);
+    setPrefilledFoodId(null);
     setPrefilledRecipeId(null);
     setEditingMealLog(mealLog);
     setIsMealLogDialogOpen(true);
@@ -191,6 +207,7 @@ export function MealLogsPanel() {
 
     if (!open) {
       setEditingMealLog(undefined);
+      setPrefilledFoodId(null);
       setPrefilledRecipeId(null);
       setMutationError(null);
     }
@@ -210,9 +227,12 @@ export function MealLogsPanel() {
       <MealLogFormDialog
         disabledReason={disabledReason}
         errorMessage={mutationError}
+        foods={foods}
+        initialFood={prefilledFood}
         initialMealLog={editingMealLog}
         initialRecipe={prefilledRecipe}
         isDisabled={isFormDisabled}
+        isFoodsLoading={foodsQuery.isLoading}
         isOpen={isMealLogDialogOpen}
         isRecipesLoading={recipesQuery.isLoading}
         isSubmitting={isSubmitting}
@@ -220,6 +240,7 @@ export function MealLogsPanel() {
         recipes={recipes}
         onCancel={() => {
           setEditingMealLog(undefined);
+          setPrefilledFoodId(null);
           setPrefilledRecipeId(null);
           setMutationError(null);
         }}

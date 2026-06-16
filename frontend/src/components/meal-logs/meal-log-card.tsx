@@ -1,5 +1,6 @@
 import {
   Activity,
+  Apple,
   BookOpen,
   CalendarClock,
   Pencil,
@@ -7,6 +8,7 @@ import {
   Trash2,
   Utensils,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -55,6 +57,7 @@ export function MealLogCard({
   symptomLogs = [],
 }: MealLogCardProps) {
   const latestSymptomLog = symptomLogs[0];
+  const foods = mealLog.foods ?? [];
   const highestSymptomSignal = symptomLogs.reduce<
     | {
         label: string;
@@ -127,6 +130,22 @@ export function MealLogCard({
           <div className="inline-flex max-w-full items-center gap-1.5 rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
             <BookOpen className="size-4 shrink-0" aria-hidden="true" />
             <span className="truncate">Receta: {mealLog.recipe.name}</span>
+          </div>
+        )}
+
+        {foods.length > 0 && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <Apple className="size-4 shrink-0" aria-hidden="true" />
+              <span>Alimentos consumidos</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2 pl-5">
+              {foods.map((food) => (
+                <Badge key={food.id} variant="secondary">
+                  {food.name}
+                </Badge>
+              ))}
+            </div>
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import { Pencil, Scale, Trash2 } from "lucide-react";
+import { Pencil, Scale, Trash2, Utensils } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,22 +9,26 @@ import { cn } from "@/lib/utils/cn";
 type FoodCardProps = {
   canDelete?: boolean;
   canEdit?: boolean;
+  canRegisterMeal?: boolean;
   food: Food;
   isDeleting?: boolean;
   onDelete?: (food: Food) => void;
   onEdit?: (food: Food) => void;
+  onRegisterMeal?: (food: Food) => void;
 };
 
 export function FoodCard({
   canDelete = false,
   canEdit = false,
+  canRegisterMeal = false,
   food,
   isDeleting = false,
   onDelete,
   onEdit,
+  onRegisterMeal,
 }: FoodCardProps) {
   const status = foodStatusMeta[food.status];
-  const showActions = canEdit || canDelete;
+  const showActions = canEdit || canDelete || canRegisterMeal;
 
   return (
     <Card className="h-full">
@@ -40,6 +44,17 @@ export function FoodCard({
         </div>
         {showActions && (
           <div className="mt-3 flex gap-2">
+            {canRegisterMeal && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onRegisterMeal?.(food)}
+              >
+                <Utensils aria-hidden="true" />
+                Registrar ingesta
+              </Button>
+            )}
             {canEdit && (
               <Button
                 type="button"

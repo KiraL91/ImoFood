@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { CreateMealLogInput } from "@/features/meal-logs/meal-logs-api";
+import type { Food } from "@/lib/types/food";
 import type { MealLog } from "@/lib/types/meal-log";
 import type { Recipe } from "@/lib/types/recipe";
 
 type MealLogFormState = {
   consumedAt: string;
   description: string;
+  foodIds: string[];
   notes: string;
   recipeId: string;
 };
@@ -19,9 +21,12 @@ type MealLogFormState = {
 type MealLogFormDialogProps = {
   disabledReason?: string;
   errorMessage?: string | null;
+  foods?: Food[];
   initialMealLog?: MealLog;
+  initialFood?: Food;
   initialRecipe?: Recipe;
   isDisabled?: boolean;
+  isFoodsLoading?: boolean;
   isOpen: boolean;
   isRecipesLoading?: boolean;
   isSubmitting?: boolean;
@@ -44,23 +49,29 @@ function toDateTimeLocalValue(iso?: string) {
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
-function getEmptyFormState(initialRecipe?: Recipe): MealLogFormState {
+function getEmptyFormState(initialRecipe?: Recipe, initialFood?: Food): MealLogFormState {
   return {
     consumedAt: toDateTimeLocalValue(),
-    description: initialRecipe?.name ?? "",
+    description: initialRecipe?.name ?? initialFood?.name ?? "",
+    foodIds: initialFood ? [initialFood.id] : [],
     notes: "",
     recipeId: initialRecipe?.id ?? "",
   };
 }
 
-function toFormState(mealLog?: MealLog, initialRecipe?: Recipe): MealLogFormState {
+function toFormState(
+  mealLog?: MealLog,
+  initialRecipe?: Recipe,
+  initialFood?: Food,
+): MealLogFormState {
   if (!mealLog) {
-    return getEmptyFormState(initialRecipe);
+    return getEmptyFormState(initialRecipe, initialFood);
   }
 
   return {
     consumedAt: toDateTimeLocalValue(mealLog.consumedAt),
     description: mealLog.description,
+    foodIds: mealLog.foodIds ?? mealLog.foods?.map((food) => food.id) ?? [],
     notes: mealLog.notes ?? "",
     recipeId: mealLog.recipeId ?? "",
   };
@@ -75,15 +86,19 @@ function toMealLogInput(
     description: formState.description.trim(),
     notes: formState.notes.trim() || undefined,
     recipeId: formState.recipeId || (isEditing ? null : undefined),
+    // Backend later: include foodIds when MealLogFood is persisted.
   };
 }
 
 export function MealLogFormDialog({
   disabledReason,
   errorMessage,
+  foods = [],
   initialMealLog,
+  initialFood,
   initialRecipe,
   isDisabled = false,
+  isFoodsLoading = false,
   isOpen,
   isRecipesLoading = false,
   isSubmitting = false,
@@ -94,16 +109,20 @@ export function MealLogFormDialog({
   recipes = [],
 }: MealLogFormDialogProps) {
   const [formState, setFormState] = useState(() =>
-    toFormState(initialMealLog, initialRecipe),
+    toFormState(initialMealLog, initialRecipe, initialFood),
   );
   const disabled = isDisabled || isSubmitting;
   const isEditing = mode === "edit";
+  const selectedFoods = formState.foodIds
+    .map((foodId) => foods.find((food) => food.id === foodId))
+    .filter((food): food is Food => Boolean(food));
+  const availableFoods = foods.filter((food) => !formState.foodIds.includes(food.id));
 
   useEffect(() => {
     if (isOpen) {
-      setFormState(toFormState(initialMealLog, initialRecipe));
+      setFormState(toFormState(initialMealLog, initialRecipe, initialFood));
     }
-  }, [initialMealLog, initialRecipe, isOpen]);
+  }, [initialFood, initialMealLog, initialRecipe, isOpen]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -131,6 +150,40 @@ export function MealLogFormDialog({
       description:
         !isEditing && selectedRecipe ? selectedRecipe.name : current.description,
       recipeId,
+    }));
+  }
+
+  function handleFoodAdd(foodId: string) {
+    if (!foodId) {
+      return;
+    }
+
+    const selectedFood = foods.find((food) => food.id === foodId);
+
+    if (!selectedFood) {
+      return;
+    }
+
+    setFormState((current) => {
+      if (current.foodIds.includes(foodId)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        description:
+          !isEditing && !current.description.trim()
+            ? selectedFood.name
+            : current.description,
+        foodIds: [...current.foodIds, foodId],
+      };
+    });
+  }
+
+  function handleFoodRemove(foodId: string) {
+    setFormState((current) => ({
+      ...current,
+      foodIds: current.foodIds.filter((currentFoodId) => currentFoodId !== foodId),
     }));
   }
 
@@ -184,6 +237,44 @@ export function MealLogFormDialog({
             ))}
           </select>
         </label>
+
+        <div className="space-y-2 text-sm font-medium md:col-span-2">
+          Alimentos consumidos
+          <select
+            value=""
+            onChange={(event) => handleFoodAdd(event.target.value)}
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={disabled || isFoodsLoading || availableFoods.length === 0}
+          >
+            <option value="">
+              {availableFoods.length > 0
+                ? "Anadir alimento a la ingesta"
+                : "No hay mas alimentos disponibles"}
+            </option>
+            {availableFoods.map((food) => (
+              <option key={food.id} value={food.id}>
+                {food.name} - {food.category}
+              </option>
+            ))}
+          </select>
+          {selectedFoods.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedFoods.map((food) => (
+                <Button
+                  key={food.id}
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={disabled}
+                  onClick={() => handleFoodRemove(food.id)}
+                >
+                  {food.name}
+                  <X aria-hidden="true" />
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <label className="space-y-2 text-sm font-medium">
           Que comiste
