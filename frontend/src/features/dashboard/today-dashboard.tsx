@@ -29,13 +29,16 @@ import {
 import { useMealLogs } from "@/features/meal-logs/meal-logs-queries";
 import { useRecipes } from "@/features/recipes/recipes-queries";
 import { useSymptomLogs } from "@/features/symptoms/symptom-logs-queries";
+import {
+  useTreatmentLogs,
+  useTreatments,
+} from "@/features/treatments/treatments-queries";
 import { env } from "@/lib/env";
 import { mealIdeas } from "@/lib/mock/meal-ideas";
-import { treatmentLogs } from "@/lib/mock/treatment-logs";
-import { treatments } from "@/lib/mock/treatments";
 import type { MealLog } from "@/lib/types/meal-log";
 import type { Recipe } from "@/lib/types/recipe";
 import type { SymptomLog } from "@/lib/types/symptom-log";
+import type { Treatment, TreatmentLog } from "@/lib/types/treatment";
 import { formatDateTime } from "@/lib/utils/format-date";
 
 type TimelineEvent = {
@@ -81,6 +84,8 @@ function sortByNewestDate<T>(items: T[], getDate: (item: T) => string) {
 function buildTimelineEvents(
   mealLogs: MealLog[],
   symptomLogs: SymptomLog[],
+  treatmentLogs: TreatmentLog[],
+  treatments: Treatment[],
 ): TimelineEvent[] {
   const mealEvents = mealLogs.map((mealLog) => ({
     at: mealLog.consumedAt,
@@ -141,6 +146,8 @@ export function TodayDashboard() {
   const mealLogsQuery = useMealLogs();
   const symptomLogsQuery = useSymptomLogs();
   const recipesQuery = useRecipes();
+  const treatmentsQuery = useTreatments();
+  const treatmentLogsQuery = useTreatmentLogs();
   const mealLogs = sortByNewestDate(
     mealLogsQuery.data ?? [],
     (mealLog) => mealLog.consumedAt,
@@ -150,7 +157,17 @@ export function TodayDashboard() {
     (symptomLog) => symptomLog.loggedAt,
   );
   const recipes = recipesQuery.data ?? [];
-  const timelineEvents = buildTimelineEvents(mealLogs, symptomLogs);
+  const treatments = treatmentsQuery.data ?? [];
+  const treatmentLogs = sortByNewestDate(
+    treatmentLogsQuery.data ?? [],
+    (treatmentLog) => treatmentLog.takenAt,
+  );
+  const timelineEvents = buildTimelineEvents(
+    mealLogs,
+    symptomLogs,
+    treatmentLogs,
+    treatments,
+  );
   const latestEvent = timelineEvents[0];
   const latestDayKey = latestEvent ? getDateKey(latestEvent.at) : "";
   const todaysEvents = timelineEvents
@@ -183,10 +200,18 @@ export function TodayDashboard() {
   const featuredIdeas = mealIdeas.slice(0, 2);
   const quickRecipe = getQuickRecipe(recipes);
   const isLoading =
-    mealLogsQuery.isLoading || symptomLogsQuery.isLoading || recipesQuery.isLoading;
-  const errors = [mealLogsQuery.error, symptomLogsQuery.error, recipesQuery.error].filter(
-    Boolean,
-  );
+    mealLogsQuery.isLoading ||
+    symptomLogsQuery.isLoading ||
+    recipesQuery.isLoading ||
+    treatmentsQuery.isLoading ||
+    treatmentLogsQuery.isLoading;
+  const errors = [
+    mealLogsQuery.error,
+    symptomLogsQuery.error,
+    recipesQuery.error,
+    treatmentsQuery.error,
+    treatmentLogsQuery.error,
+  ].filter(Boolean);
   const summaryCards = [
     {
       href: "/meal-logs",
@@ -204,7 +229,7 @@ export function TodayDashboard() {
       href: "/treatments",
       icon: Pill,
       label: "Tratamientos",
-      value: todaysTreatmentLogs.length,
+      value: isLoading ? "..." : todaysTreatmentLogs.length,
     },
     {
       href: "/meal-logs",
