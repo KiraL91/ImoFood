@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { MealLog as PrismaMealLog, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateMealLogDto } from "./dto/create-meal-log.dto";
@@ -7,6 +7,21 @@ import type { UpdateMealLogDto } from "./dto/update-meal-log.dto";
 import type { MealLog } from "./types/meal-log";
 
 const mealLogInclude = {
+  foods: {
+    include: {
+      food: {
+        select: {
+          category: true,
+          id: true,
+          name: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  },
   recipe: {
     select: {
       id: true,
@@ -15,12 +30,9 @@ const mealLogInclude = {
   },
 } satisfies Prisma.MealLogInclude;
 
-type PrismaMealLogWithRecipe = PrismaMealLog & {
-  recipe?: {
-    id: string;
-    name: string;
-  } | null;
-};
+type PrismaMealLogWithRelations = Prisma.MealLogGetPayload<{
+  include: typeof mealLogInclude;
+}>;
 
 @Injectable()
 export class MealLogsService {
@@ -54,15 +66,30 @@ export class MealLogsService {
 
   async create(createMealLogDto: CreateMealLogDto): Promise<MealLog> {
     const recipeId = this.normalizeRecipeId(createMealLogDto.recipeId);
+    const foodIds = this.normalizeFoodIds(createMealLogDto.foodIds) ?? [];
 
     if (recipeId) {
       await this.ensureRecipeExists(recipeId);
     }
 
+    await this.ensureFoodsExist(foodIds);
+
     const mealLog = await this.prisma.mealLog.create({
       data: {
         consumedAt: new Date(createMealLogDto.consumedAt),
         description: createMealLogDto.description.trim(),
+        foods:
+          foodIds.length > 0
+            ? {
+                create: foodIds.map((foodId) => ({
+                  food: {
+                    connect: {
+                      id: foodId,
+                    },
+                  },
+                })),
+              }
+            : undefined,
         notes: createMealLogDto.notes?.trim() || undefined,
         recipe: recipeId
           ? {
@@ -85,9 +112,14 @@ export class MealLogsService {
     await this.findOne(id);
 
     const recipeId = this.normalizeRecipeId(updateMealLogDto.recipeId);
+    const foodIds = this.normalizeFoodIds(updateMealLogDto.foodIds);
 
     if (recipeId) {
       await this.ensureRecipeExists(recipeId);
+    }
+
+    if (foodIds !== undefined) {
+      await this.ensureFoodsExist(foodIds);
     }
 
     const data: Prisma.MealLogUpdateInput = {
@@ -113,12 +145,37 @@ export class MealLogsService {
               },
     };
 
-    const updatedMealLog = await this.prisma.mealLog.update({
-      data,
-      include: mealLogInclude,
-      where: {
-        id,
-      },
+    const updatedMealLog = await this.prisma.$transaction(async (prisma) => {
+      await prisma.mealLog.update({
+        data,
+        where: {
+          id,
+        },
+      });
+
+      if (foodIds !== undefined) {
+        await prisma.mealLogFood.deleteMany({
+          where: {
+            mealLogId: id,
+          },
+        });
+
+        if (foodIds.length > 0) {
+          await prisma.mealLogFood.createMany({
+            data: foodIds.map((foodId) => ({
+              foodId,
+              mealLogId: id,
+            })),
+          });
+        }
+      }
+
+      return prisma.mealLog.findUniqueOrThrow({
+        include: mealLogInclude,
+        where: {
+          id,
+        },
+      });
     });
 
     return this.toMealLog(updatedMealLog);
@@ -148,6 +205,20 @@ export class MealLogsService {
       : null;
   }
 
+  private normalizeFoodIds(foodIds?: string[]): string[] | undefined {
+    if (foodIds === undefined) {
+      return undefined;
+    }
+
+    return Array.from(
+      new Set(
+        foodIds
+          .map((foodId) => foodId.trim())
+          .filter((foodId) => foodId.length > 0),
+      ),
+    );
+  }
+
   private async ensureRecipeExists(recipeId: string): Promise<void> {
     const recipe = await this.prisma.recipe.findUnique({
       select: {
@@ -165,11 +236,47 @@ export class MealLogsService {
     }
   }
 
-  private toMealLog(mealLog: PrismaMealLogWithRecipe): MealLog {
+  private async ensureFoodsExist(foodIds: string[]): Promise<void> {
+    if (foodIds.length === 0) {
+      return;
+    }
+
+    const foods = await this.prisma.food.findMany({
+      select: {
+        id: true,
+      },
+      where: {
+        id: {
+          in: foodIds,
+        },
+      },
+    });
+    const existingFoodIds = new Set(foods.map((food) => food.id));
+    const missingFoodIds = foodIds.filter(
+      (foodId) => !existingFoodIds.has(foodId),
+    );
+
+    if (missingFoodIds.length > 0) {
+      throw new NotFoundException(
+        `Food IDs not found: ${missingFoodIds.join(", ")}.`,
+      );
+    }
+  }
+
+  private toMealLog(mealLog: PrismaMealLogWithRelations): MealLog {
+    const foods = mealLog.foods.map((mealLogFood) => ({
+      category: mealLogFood.food.category,
+      id: mealLogFood.food.id,
+      name: mealLogFood.food.name,
+      status: mealLogFood.food.status,
+    }));
+
     return {
       consumedAt: mealLog.consumedAt.toISOString(),
       createdAt: mealLog.createdAt.toISOString(),
       description: mealLog.description,
+      foodIds: foods.map((food) => food.id),
+      foods,
       id: mealLog.id,
       notes: mealLog.notes ?? undefined,
       recipe: mealLog.recipe

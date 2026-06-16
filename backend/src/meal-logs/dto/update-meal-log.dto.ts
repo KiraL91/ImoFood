@@ -1,4 +1,10 @@
-import { IsISO8601, IsOptional, IsString } from "class-validator";
+import {
+  ArrayUnique,
+  IsArray,
+  IsISO8601,
+  IsOptional,
+  IsString,
+} from "class-validator";
 
 export class UpdateMealLogDto {
   @IsOptional()
@@ -16,4 +22,10 @@ export class UpdateMealLogDto {
   @IsOptional()
   @IsString()
   recipeId?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  foodIds?: string[];
 }

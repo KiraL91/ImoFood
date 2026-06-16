@@ -4,6 +4,7 @@ import { mealLogSchema, type MealLog } from "@/lib/types/meal-log";
 export type CreateMealLogInput = {
   consumedAt: string;
   description: string;
+  foodIds?: string[];
   notes?: string;
   recipeId?: string | null;
 };

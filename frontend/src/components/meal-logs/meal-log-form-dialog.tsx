@@ -84,9 +84,9 @@ function toMealLogInput(
   return {
     consumedAt: new Date(formState.consumedAt).toISOString(),
     description: formState.description.trim(),
+    foodIds: formState.foodIds,
     notes: formState.notes.trim() || undefined,
     recipeId: formState.recipeId || (isEditing ? null : undefined),
-    // Backend later: include foodIds when MealLogFood is persisted.
   };
 }
 

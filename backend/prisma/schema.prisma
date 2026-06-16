@@ -32,6 +32,7 @@ model Food {
   tags      String[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  mealLogs  MealLogFood[]
 
   @@index([category])
   @@index([status])
@@ -64,9 +65,21 @@ model MealLog {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   symptomLogs SymptomLog[]
+  foods       MealLogFood[]
 
   @@index([consumedAt])
   @@index([recipeId])
+}
+
+model MealLogFood {
+  mealLogId String
+  foodId    String
+  createdAt DateTime @default(now())
+  mealLog   MealLog  @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+  food      Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@id([mealLogId, foodId])
+  @@index([foodId])
 }
 
 model SymptomLog {
