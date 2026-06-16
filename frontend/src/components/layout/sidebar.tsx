@@ -32,9 +32,6 @@ export function Sidebar() {
               <h2 className="text-xs font-semibold uppercase text-muted-foreground">
                 {group.label}
               </h2>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {group.description}
-              </p>
             </div>
             <div className="space-y-1">
               {group.items.map((item) => {

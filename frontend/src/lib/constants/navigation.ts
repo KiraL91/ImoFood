@@ -20,7 +20,6 @@ export type NavigationItem = {
 export type NavigationGroup = {
   id: string;
   label: string;
-  description: string;
   items: NavigationItem[];
 };
 
@@ -32,7 +31,6 @@ export type MobileNavigationItem =
       type: "group";
       id: string;
       label: string;
-      description: string;
       icon: LucideIcon;
       items: NavigationItem[];
     };
@@ -108,25 +106,21 @@ export const navigationGroups: NavigationGroup[] = [
   {
     id: "tracking",
     label: "Seguimiento",
-    description: "Registrar y revisar lo que ocurre cada dia",
     items: [todayItem, mealLogsItem, symptomsItem],
   },
   {
     id: "food",
     label: "Comida",
-    description: "Consultar, preparar y decidir que comer",
     items: [foodsItem, recipesItem, mealIdeasItem],
   },
   {
     id: "support",
     label: "Soporte",
-    description: "Tratamientos y contexto complementario",
     items: [treatmentsItem],
   },
   {
     id: "system",
     label: "Sistema",
-    description: "Preferencias e integraciones",
     items: [settingsItem],
   },
 ];
@@ -140,7 +134,6 @@ export const mobileNavigationItems: MobileNavigationItem[] = [
     id: "diary",
     type: "group",
     label: "Mi diario",
-    description: "Ingestas y sintomas",
     icon: History,
     items: [mealLogsItem, symptomsItem],
   },
@@ -148,7 +141,6 @@ export const mobileNavigationItems: MobileNavigationItem[] = [
     id: "library",
     type: "group",
     label: "Biblioteca",
-    description: "Alimentos, recetas e ideas",
     icon: CookingPot,
     items: [foodsItem, recipesItem, mealIdeasItem],
   },

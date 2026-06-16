@@ -26,7 +26,6 @@ export function MobileNav() {
         <div className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 rounded-lg border bg-card p-3 shadow-lg backdrop-blur lg:hidden">
           <div className="mb-3">
             <p className="text-sm font-semibold">{openGroup.label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{openGroup.description}</p>
           </div>
           <div className="grid gap-2">
             {openGroup.items.map((item) => {
