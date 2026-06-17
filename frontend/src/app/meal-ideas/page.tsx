@@ -6,7 +6,8 @@ export default function MealIdeasPage() {
       <section>
         <h3 className="text-lg font-semibold">Sugerencias de comida</h3>
         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-          Ideas generadas sin IA a partir de alimentos seguros y recetas guardadas.
+          Ideas basicas por reglas y modo avanzado preparado para futuras sugerencias con
+          IA.
         </p>
       </section>
       <MealIdeasList />
