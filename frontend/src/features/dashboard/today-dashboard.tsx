@@ -62,8 +62,21 @@ const dayFormatter = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",
 });
 
+const dateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Europe/Madrid",
+  year: "numeric",
+});
+
 function getDateKey(value: string) {
-  return new Date(value).toISOString().slice(0, 10);
+  const parts = Object.fromEntries(
+    dateKeyFormatter
+      .formatToParts(new Date(value))
+      .map((part) => [part.type, part.value]),
+  );
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 function formatTime(value: string) {
@@ -169,21 +182,21 @@ export function TodayDashboard() {
     treatments,
   );
   const latestEvent = timelineEvents[0];
-  const latestDayKey = latestEvent ? getDateKey(latestEvent.at) : "";
+  const todayKey = getDateKey(new Date().toISOString());
   const todaysEvents = timelineEvents
-    .filter((event) => getDateKey(event.at) === latestDayKey)
+    .filter((event) => getDateKey(event.at) === todayKey)
     .sort(
       (leftEvent, rightEvent) =>
         new Date(leftEvent.at).getTime() - new Date(rightEvent.at).getTime(),
     );
   const todaysMealLogs = mealLogs.filter(
-    (mealLog) => getDateKey(mealLog.consumedAt) === latestDayKey,
+    (mealLog) => getDateKey(mealLog.consumedAt) === todayKey,
   );
   const todaysSymptomLogs = symptomLogs.filter(
-    (symptomLog) => getDateKey(symptomLog.loggedAt) === latestDayKey,
+    (symptomLog) => getDateKey(symptomLog.loggedAt) === todayKey,
   );
   const todaysTreatmentLogs = treatmentLogs.filter(
-    (treatmentLog) => getDateKey(treatmentLog.takenAt) === latestDayKey,
+    (treatmentLog) => getDateKey(treatmentLog.takenAt) === todayKey,
   );
   const latestMealLog = mealLogs[0];
   const latestSymptomLog = symptomLogs[0];
@@ -229,7 +242,7 @@ export function TodayDashboard() {
       href: "/treatments",
       icon: Pill,
       label: "Tratamientos",
-      value: isLoading ? "..." : todaysTreatmentLogs.length,
+      value: isLoading ? "..." : activeTreatmentsCount,
     },
     {
       href: "/meal-logs",
@@ -257,7 +270,7 @@ export function TodayDashboard() {
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <CalendarDays className="size-4" aria-hidden="true" />
-              {latestEvent ? formatDay(latestEvent.at) : "Sin actividad registrada"}
+              {formatDay(new Date().toISOString())}
             </div>
             <div>
               <h3 className="text-xl font-semibold">Seguimiento de hoy</h3>
@@ -349,7 +362,7 @@ export function TodayDashboard() {
                 <CardDescription>
                   {isLoading
                     ? "Cargando registros..."
-                    : `${todaysEvents.length} registros en el dia de seguimiento.`}
+                    : `${todaysEvents.length} registros hoy: ${todaysMealLogs.length} ingestas, ${todaysSymptomLogs.length} sintomas y ${todaysTreatmentLogs.length} tomas.`}
                 </CardDescription>
               </div>
             </div>
