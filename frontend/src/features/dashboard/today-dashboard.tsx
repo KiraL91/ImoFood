@@ -26,6 +26,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useFoods } from "@/features/foods/foods-queries";
+import { buildMealIdeas } from "@/features/meal-ideas/meal-ideas-generator";
 import { useMealLogs } from "@/features/meal-logs/meal-logs-queries";
 import { useRecipes } from "@/features/recipes/recipes-queries";
 import { useSymptomLogs } from "@/features/symptoms/symptom-logs-queries";
@@ -34,7 +36,6 @@ import {
   useTreatments,
 } from "@/features/treatments/treatments-queries";
 import { env } from "@/lib/env";
-import { mealIdeas } from "@/lib/mock/meal-ideas";
 import type { MealLog } from "@/lib/types/meal-log";
 import type { Recipe } from "@/lib/types/recipe";
 import type { SymptomLog } from "@/lib/types/symptom-log";
@@ -159,6 +160,7 @@ export function TodayDashboard() {
   const mealLogsQuery = useMealLogs();
   const symptomLogsQuery = useSymptomLogs();
   const recipesQuery = useRecipes();
+  const foodsQuery = useFoods();
   const treatmentsQuery = useTreatments();
   const treatmentLogsQuery = useTreatmentLogs();
   const mealLogs = sortByNewestDate(
@@ -170,6 +172,7 @@ export function TodayDashboard() {
     (symptomLog) => symptomLog.loggedAt,
   );
   const recipes = recipesQuery.data ?? [];
+  const foods = foodsQuery.data ?? [];
   const treatments = treatmentsQuery.data ?? [];
   const treatmentLogs = sortByNewestDate(
     treatmentLogsQuery.data ?? [],
@@ -210,18 +213,24 @@ export function TodayDashboard() {
           new Date(latestMealLog.consumedAt).getTime(),
       )
     : false;
-  const featuredIdeas = mealIdeas.slice(0, 2);
+  const featuredIdeas = buildMealIdeas({
+    foods,
+    limit: 2,
+    recipes,
+  });
   const quickRecipe = getQuickRecipe(recipes);
   const isLoading =
     mealLogsQuery.isLoading ||
     symptomLogsQuery.isLoading ||
     recipesQuery.isLoading ||
+    foodsQuery.isLoading ||
     treatmentsQuery.isLoading ||
     treatmentLogsQuery.isLoading;
   const errors = [
     mealLogsQuery.error,
     symptomLogsQuery.error,
     recipesQuery.error,
+    foodsQuery.error,
     treatmentsQuery.error,
     treatmentLogsQuery.error,
   ].filter(Boolean);
