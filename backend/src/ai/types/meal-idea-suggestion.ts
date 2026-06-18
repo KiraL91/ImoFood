@@ -15,6 +15,7 @@ export type AiMealIdeasContextSummary = {
 };
 
 export type AiMealIdeaSuggestion = {
+  foodNames: string[];
   items: string[];
   reason?: string;
   tags: string[];

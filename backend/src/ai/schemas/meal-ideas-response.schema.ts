@@ -3,6 +3,12 @@ export const mealIdeasResponseSchema = {
     suggestions: {
       items: {
         properties: {
+          foodNames: {
+            items: {
+              type: "string",
+            },
+            type: "array",
+          },
           items: {
             items: {
               type: "string",
@@ -22,7 +28,7 @@ export const mealIdeasResponseSchema = {
             type: "string",
           },
         },
-        required: ["title", "items", "tags"],
+        required: ["title", "items", "foodNames", "tags"],
         type: "object",
       },
       type: "array",

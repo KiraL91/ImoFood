@@ -19,6 +19,9 @@ import type {
 import { PrismaService } from "../prisma/prisma.service";
 
 type MealIdeasContext = {
+  blockedFoods: Array<{
+    name: string;
+  }>;
   highRatedRecipes: Array<{
     ingredients: string[];
     name: string;
@@ -80,6 +83,7 @@ export class AiSuggestionsService {
     const suggestions = this.parseMealIdeasSuggestions(
       completion.content,
       createMealIdeasSuggestionDto.limit ?? 3,
+      context,
     );
 
     return {
@@ -91,63 +95,87 @@ export class AiSuggestionsService {
   }
 
   private async getMealIdeasContext(): Promise<MealIdeasContext> {
-    const [safeFoods, reasonableFoods, highRatedRecipes] = await Promise.all([
-      this.prisma.food.findMany({
-        orderBy: {
-          name: "asc",
-        },
-        select: {
-          name: true,
-          suggestedServing: true,
-          tags: true,
-          tolerance: true,
-        },
-        where: {
-          status: FoodStatus.allowed,
-          tolerance: {
-            gte: 4,
+    const [safeFoods, reasonableFoods, blockedFoods, highRatedRecipes] =
+      await Promise.all([
+        this.prisma.food.findMany({
+          orderBy: {
+            name: "asc",
           },
-        },
-      }),
-      this.prisma.food.findMany({
-        orderBy: {
-          name: "asc",
-        },
-        select: {
-          name: true,
-          status: true,
-          suggestedServing: true,
-          tags: true,
-          tolerance: true,
-        },
-        where: {
-          status: {
-            in: [FoodStatus.allowed, FoodStatus.testing],
+          select: {
+            name: true,
+            suggestedServing: true,
+            tags: true,
+            tolerance: true,
           },
-          tolerance: {
-            gte: 3,
+          where: {
+            status: FoodStatus.allowed,
+            tolerance: {
+              gte: 4,
+            },
           },
-        },
-      }),
-      this.prisma.recipe.findMany({
-        orderBy: {
-          name: "asc",
-        },
-        select: {
-          ingredients: true,
-          name: true,
-          rating: true,
-          tags: true,
-        },
-        where: {
-          rating: {
-            gte: 4,
+        }),
+        this.prisma.food.findMany({
+          orderBy: {
+            name: "asc",
           },
-        },
-      }),
-    ]);
+          select: {
+            name: true,
+            status: true,
+            suggestedServing: true,
+            tags: true,
+            tolerance: true,
+          },
+          where: {
+            status: {
+              in: [FoodStatus.allowed, FoodStatus.testing],
+            },
+            tolerance: {
+              gte: 3,
+            },
+          },
+        }),
+        this.prisma.food.findMany({
+          orderBy: {
+            name: "asc",
+          },
+          select: {
+            name: true,
+          },
+          where: {
+            OR: [
+              {
+                status: {
+                  in: [FoodStatus.avoid, FoodStatus.caution],
+                },
+              },
+              {
+                tolerance: {
+                  lt: 3,
+                },
+              },
+            ],
+          },
+        }),
+        this.prisma.recipe.findMany({
+          orderBy: {
+            name: "asc",
+          },
+          select: {
+            ingredients: true,
+            name: true,
+            rating: true,
+            tags: true,
+          },
+          where: {
+            rating: {
+              gte: 4,
+            },
+          },
+        }),
+      ]);
 
     return {
+      blockedFoods,
       highRatedRecipes,
       reasonableFoods,
       safeFoods,
@@ -191,13 +219,20 @@ export class AiSuggestionsService {
       user: JSON.stringify(
         {
           avoidedTags: createMealIdeasSuggestionDto.avoidedTags ?? [],
-          context,
+          context: {
+            highRatedRecipes: context.highRatedRecipes,
+            reasonableFoods: context.reasonableFoods,
+            safeFoods: context.safeFoods,
+          },
           limit,
           notes: createMealIdeasSuggestionDto.notes?.trim() || undefined,
           preferredTags: createMealIdeasSuggestionDto.preferredTags ?? [],
           responseFormat: {
             suggestions: [
               {
+                foodNames: [
+                  "exact food names copied from context.reasonableFoods or context.safeFoods",
+                ],
                 items: ["string"],
                 reason: "string",
                 tags: ["string"],
@@ -215,6 +250,7 @@ export class AiSuggestionsService {
   private parseMealIdeasSuggestions(
     content: string,
     limit: number,
+    context: MealIdeasContext,
   ): AiMealIdeaSuggestion[] {
     const parsedContent = this.parseJsonContent(content);
     const suggestions = this.readSuggestions(parsedContent);
@@ -225,9 +261,13 @@ export class AiSuggestionsService {
       );
     }
 
-    return suggestions
+    const parsedSuggestions = suggestions
       .slice(0, limit)
       .map((suggestion) => this.toMealIdeaSuggestion(suggestion));
+
+    this.assertSuggestedFoodsAreAllowed(parsedSuggestions, context);
+
+    return parsedSuggestions;
   }
 
   private parseJsonContent(content: string): unknown {
@@ -260,6 +300,7 @@ export class AiSuggestionsService {
     }
 
     const title = this.readRequiredString(suggestion.title, "title");
+    const foodNames = this.readStringList(suggestion.foodNames, "foodNames");
     const items = this.readStringList(suggestion.items, "items");
     const tags = this.readStringList(suggestion.tags, "tags");
     const reason = this.readOptionalString(suggestion.reason);
@@ -269,6 +310,7 @@ export class AiSuggestionsService {
     }
 
     return {
+      foodNames,
       items,
       reason,
       tags,
@@ -317,5 +359,87 @@ export class AiSuggestionsService {
 
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+  }
+
+  private assertSuggestedFoodsAreAllowed(
+    suggestions: AiMealIdeaSuggestion[],
+    context: MealIdeasContext,
+  ): void {
+    const allowedFoods = this.buildFoodLookup([
+      ...context.safeFoods.map((food) => food.name),
+      ...context.reasonableFoods.map((food) => food.name),
+    ]);
+    const blockedFoodNames = context.blockedFoods
+      .map((food) => food.name)
+      .filter((name) => this.normalizeFoodName(name).length >= 3);
+
+    suggestions.forEach((suggestion) => {
+      if (suggestion.foodNames.length === 0) {
+        throw new BadGatewayException(
+          "AI suggestion did not include suggested food names.",
+        );
+      }
+
+      const validatedFoodNames = suggestion.foodNames.map((foodName) => {
+        const normalizedFoodName = this.normalizeFoodName(foodName);
+        const allowedFoodName = allowedFoods.get(normalizedFoodName);
+
+        if (!allowedFoodName) {
+          throw new BadGatewayException(
+            `AI suggestion included a food outside the allowed context: "${foodName}".`,
+          );
+        }
+
+        return allowedFoodName;
+      });
+
+      suggestion.foodNames = Array.from(new Set(validatedFoodNames));
+
+      const suggestionText = this.normalizeFoodName(
+        [
+          suggestion.title,
+          ...suggestion.items,
+          suggestion.reason ?? "",
+          ...suggestion.tags,
+        ].join(" "),
+      );
+
+      blockedFoodNames.forEach((foodName) => {
+        const normalizedFoodName = this.normalizeFoodName(foodName);
+
+        if (this.containsFoodName(suggestionText, normalizedFoodName)) {
+          throw new BadGatewayException(
+            `AI suggestion mentioned a blocked food: "${foodName}".`,
+          );
+        }
+      });
+    });
+  }
+
+  private buildFoodLookup(foodNames: string[]): Map<string, string> {
+    return new Map(
+      foodNames.map((foodName) => [
+        this.normalizeFoodName(foodName),
+        foodName.trim(),
+      ]),
+    );
+  }
+
+  private containsFoodName(text: string, foodName: string): boolean {
+    const escapedFoodName = foodName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const foodNamePattern = new RegExp(
+      `(^|[^a-z0-9])${escapedFoodName}([^a-z0-9]|$)`,
+    );
+
+    return foodNamePattern.test(text);
+  }
+
+  private normalizeFoodName(value: string): string {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
   }
 }
