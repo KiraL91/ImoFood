@@ -133,14 +133,8 @@ export class GeminiAiModelProvider implements AiModelProvider {
       ],
       generationConfig: {
         maxOutputTokens: options.maxOutputTokens,
-        responseFormat: prompt.responseFormat
-          ? {
-              text: {
-                mimeType: prompt.responseFormat.mimeType,
-                schema: prompt.responseFormat.schema,
-              },
-            }
-          : undefined,
+        responseJsonSchema: prompt.responseFormat?.schema,
+        responseMimeType: prompt.responseFormat?.mimeType,
         temperature: options.temperature,
       },
       system_instruction: {
