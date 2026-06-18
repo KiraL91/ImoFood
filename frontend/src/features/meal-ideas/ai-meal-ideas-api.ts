@@ -18,6 +18,7 @@ const aiConfigurationSchema = z.object({
 });
 
 const aiMealIdeaSuggestionSchema = z.object({
+  foodNames: z.array(z.string()).default([]),
   items: z.array(z.string()),
   reason: z.string().optional(),
   tags: z.array(z.string()),
@@ -36,6 +37,7 @@ const aiMealIdeasSuggestionResultSchema = z.object({
 });
 
 export type AiConfiguration = z.infer<typeof aiConfigurationSchema>;
+export type AiMealIdeaSuggestion = z.infer<typeof aiMealIdeaSuggestionSchema>;
 export type AiMealIdeasSuggestionResult = z.infer<
   typeof aiMealIdeasSuggestionResultSchema
 >;

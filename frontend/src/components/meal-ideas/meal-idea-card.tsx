@@ -8,12 +8,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { MealIdea } from "@/lib/types/meal-idea";
+import type { ReactNode } from "react";
 
 type MealIdeaCardProps = {
+  actions?: ReactNode;
   mealIdea: MealIdea;
 };
 
-export function MealIdeaCard({ mealIdea }: MealIdeaCardProps) {
+export function MealIdeaCard({ actions, mealIdea }: MealIdeaCardProps) {
   return (
     <Card className="h-full">
       <CardHeader>
@@ -47,6 +49,7 @@ export function MealIdeaCard({ mealIdea }: MealIdeaCardProps) {
             </Badge>
           ))}
         </div>
+        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
       </CardContent>
     </Card>
   );

@@ -21,6 +21,7 @@ type RecipeFormState = {
 type RecipeFormDialogProps = {
   disabledReason?: string;
   errorMessage?: string | null;
+  initialInput?: CreateRecipeInput;
   initialRecipe?: Recipe;
   isDisabled?: boolean;
   isOpen: boolean;
@@ -40,6 +41,18 @@ const emptyFormState: RecipeFormState = {
   steps: "",
   tags: "",
 };
+
+function inputToFormState(input: CreateRecipeInput): RecipeFormState {
+  return {
+    description: input.description ?? "",
+    ingredients: input.ingredients.join(", "),
+    name: input.name,
+    prepTimeMinutes: String(input.prepTimeMinutes),
+    rating: input.rating ? (String(input.rating) as RecipeFormState["rating"]) : "",
+    steps: input.steps?.join("\n") ?? "",
+    tags: input.tags.join(", "),
+  };
+}
 
 function toFormState(recipe?: Recipe): RecipeFormState {
   if (!recipe) {
@@ -88,6 +101,7 @@ function toRecipeInput(formState: RecipeFormState): CreateRecipeInput {
 export function RecipeFormDialog({
   disabledReason,
   errorMessage,
+  initialInput,
   initialRecipe,
   isDisabled = false,
   isOpen,
@@ -97,15 +111,19 @@ export function RecipeFormDialog({
   onOpenChange,
   onSubmit,
 }: RecipeFormDialogProps) {
-  const [formState, setFormState] = useState(() => toFormState(initialRecipe));
+  const [formState, setFormState] = useState(() =>
+    initialInput ? inputToFormState(initialInput) : toFormState(initialRecipe),
+  );
   const disabled = isDisabled || isSubmitting;
   const isEditing = mode === "edit";
 
   useEffect(() => {
     if (isOpen) {
-      setFormState(toFormState(initialRecipe));
+      setFormState(
+        initialInput ? inputToFormState(initialInput) : toFormState(initialRecipe),
+      );
     }
-  }, [initialRecipe, isOpen]);
+  }, [initialInput, initialRecipe, isOpen]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

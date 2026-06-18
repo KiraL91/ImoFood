@@ -4,13 +4,16 @@ import { useState } from "react";
 import {
   AlertCircle,
   Brain,
+  Check,
   ListChecks,
   Loader2,
+  Save,
   Server,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import { MealIdeaCard } from "@/components/meal-ideas/meal-idea-card";
+import { RecipeFormDialog } from "@/components/recipes/recipe-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,10 +28,13 @@ import {
   useAiSuggestionsConfig,
   useGenerateAiMealIdeas,
 } from "@/features/meal-ideas/ai-meal-ideas-queries";
+import type { AiMealIdeaSuggestion } from "@/features/meal-ideas/ai-meal-ideas-api";
 import { buildMealIdeas } from "@/features/meal-ideas/meal-ideas-generator";
-import { useRecipes } from "@/features/recipes/recipes-queries";
+import type { CreateRecipeInput } from "@/features/recipes/recipes-api";
+import { useCreateRecipe, useRecipes } from "@/features/recipes/recipes-queries";
 import { env } from "@/lib/env";
 import type { Food } from "@/lib/types/food";
+import { useAuth } from "@/providers/auth-provider";
 
 type SuggestionMode = "basic" | "ai";
 
@@ -51,12 +57,47 @@ function getReasonableFoods(foods: Food[]) {
   );
 }
 
+function getAiSuggestionKey(suggestion: AiMealIdeaSuggestion) {
+  return `${suggestion.title}-${suggestion.items.join("|")}`;
+}
+
+function getUniqueItems(items: string[]) {
+  return Array.from(
+    new Set(items.map((item) => item.trim()).filter((item) => item.length > 0)),
+  );
+}
+
+function toRecipeDraft(suggestion: AiMealIdeaSuggestion): CreateRecipeInput {
+  return {
+    description: suggestion.reason,
+    ingredients:
+      suggestion.foodNames.length > 0
+        ? getUniqueItems(suggestion.foodNames)
+        : getUniqueItems(suggestion.items),
+    name: suggestion.title,
+    prepTimeMinutes: 15,
+    steps: [
+      "Revisar tolerancia personal antes de repetir.",
+      "Preparar los alimentos indicados y ajustar raciones segun tolerancia.",
+    ],
+    tags: getUniqueItems([...suggestion.tags, "ia"]),
+  };
+}
+
 export function MealIdeasList() {
   const [mode, setMode] = useState<SuggestionMode>("basic");
+  const [selectedAiSuggestion, setSelectedAiSuggestion] =
+    useState<AiMealIdeaSuggestion | null>(null);
+  const [savedAiSuggestionKeys, setSavedAiSuggestionKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [saveRecipeError, setSaveRecipeError] = useState<string | null>(null);
   const foodsQuery = useFoods();
   const recipesQuery = useRecipes();
   const aiConfigQuery = useAiSuggestionsConfig();
   const generateAiMealIdeas = useGenerateAiMealIdeas();
+  const createRecipe = useCreateRecipe();
+  const { hasPermission, isAuthenticated } = useAuth();
   const isLoading = foodsQuery.isLoading || recipesQuery.isLoading;
   const errors = [foodsQuery.error, recipesQuery.error].filter(Boolean);
   const foods = foodsQuery.data ?? [];
@@ -73,14 +114,32 @@ export function MealIdeasList() {
   const aiConfig = aiConfigQuery.data;
   const isAiReady = aiConfig?.status === "ready";
   const canGenerateWithAi = hasApiBaseUrl && isAiReady && !generateAiMealIdeas.isPending;
+  const canCreateRecipeFromAi =
+    hasApiBaseUrl && isAuthenticated && hasPermission("recipes:create");
+  const saveRecipeDisabledReason = !hasApiBaseUrl
+    ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar recetas."
+    : !isAuthenticated
+      ? "Inicia sesion para guardar recetas."
+      : "Tu rol no permite crear recetas.";
+  const selectedRecipeDraft = selectedAiSuggestion
+    ? toRecipeDraft(selectedAiSuggestion)
+    : undefined;
   const aiMealIdeas =
-    generateAiMealIdeas.data?.suggestions.map((suggestion, index) => ({
-      id: `ai-${index}-${suggestion.title}`,
-      items: suggestion.items,
-      reason: suggestion.reason,
-      tags: Array.from(new Set([...suggestion.tags, "ia"])),
-      title: suggestion.title,
-    })) ?? [];
+    generateAiMealIdeas.data?.suggestions.map((suggestion, index) => {
+      const key = getAiSuggestionKey(suggestion);
+
+      return {
+        key,
+        mealIdea: {
+          id: `ai-${index}-${suggestion.title}`,
+          items: suggestion.items,
+          reason: suggestion.reason,
+          tags: Array.from(new Set([...suggestion.tags, "ia"])),
+          title: suggestion.title,
+        },
+        suggestion,
+      };
+    }) ?? [];
 
   const aiStatusText = !hasApiBaseUrl
     ? "Configura NEXT_PUBLIC_API_BASE_URL para usar el backend."
@@ -98,8 +157,48 @@ export function MealIdeasList() {
     });
   }
 
+  function handleOpenSaveRecipeDialog(suggestion: AiMealIdeaSuggestion) {
+    setSaveRecipeError(null);
+    setSelectedAiSuggestion(suggestion);
+  }
+
+  function handleSaveRecipeDialogOpenChange(open: boolean) {
+    if (!open) {
+      setSelectedAiSuggestion(null);
+      setSaveRecipeError(null);
+    }
+  }
+
+  async function handleSaveRecipe(input: CreateRecipeInput) {
+    if (!selectedAiSuggestion) {
+      return;
+    }
+
+    setSaveRecipeError(null);
+
+    try {
+      await createRecipe.mutateAsync(input);
+      const savedKey = getAiSuggestionKey(selectedAiSuggestion);
+      setSavedAiSuggestionKeys((current) => new Set(current).add(savedKey));
+      setSelectedAiSuggestion(null);
+    } catch (error) {
+      setSaveRecipeError(getErrorMessage(error));
+    }
+  }
+
   return (
     <div className="space-y-5">
+      <RecipeFormDialog
+        disabledReason={saveRecipeDisabledReason}
+        errorMessage={saveRecipeError}
+        initialInput={selectedRecipeDraft}
+        isDisabled={!canCreateRecipeFromAi}
+        isOpen={Boolean(selectedAiSuggestion)}
+        isSubmitting={createRecipe.isPending}
+        onOpenChange={handleSaveRecipeDialogOpenChange}
+        onSubmit={handleSaveRecipe}
+      />
+
       <section className="rounded-lg border bg-card p-4 shadow-sm sm:p-5">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
           <div>
@@ -255,9 +354,37 @@ export function MealIdeasList() {
                 </p>
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {aiMealIdeas.map((mealIdea) => (
-                  <MealIdeaCard key={mealIdea.id} mealIdea={mealIdea} />
-                ))}
+                {aiMealIdeas.map(({ key, mealIdea, suggestion }) => {
+                  const isSaved = savedAiSuggestionKeys.has(key);
+
+                  return (
+                    <MealIdeaCard
+                      key={key}
+                      mealIdea={mealIdea}
+                      actions={
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isSaved ? "secondary" : "outline"}
+                          disabled={!canCreateRecipeFromAi || isSaved}
+                          title={
+                            canCreateRecipeFromAi
+                              ? "Guardar como receta"
+                              : saveRecipeDisabledReason
+                          }
+                          onClick={() => handleOpenSaveRecipeDialog(suggestion)}
+                        >
+                          {isSaved ? (
+                            <Check aria-hidden="true" />
+                          ) : (
+                            <Save aria-hidden="true" />
+                          )}
+                          {isSaved ? "Guardada" : "Guardar como receta"}
+                        </Button>
+                      }
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
