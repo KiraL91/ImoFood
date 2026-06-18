@@ -6,6 +6,7 @@ import { AiModelConfigService } from "./ai-model-config.service";
 import { AiSuggestionsController } from "./ai-suggestions.controller";
 import { AiSuggestionsService } from "./ai-suggestions.service";
 import { AI_MODEL_PROVIDER } from "./ai.tokens";
+import { GeminiAiModelProvider } from "./providers/gemini-ai-model.provider";
 import { PlaceholderAiModelProvider } from "./providers/placeholder-ai-model.provider";
 
 @Module({
@@ -16,7 +17,16 @@ import { PlaceholderAiModelProvider } from "./providers/placeholder-ai-model.pro
     AiSuggestionsService,
     {
       provide: AI_MODEL_PROVIDER,
-      useClass: PlaceholderAiModelProvider,
+      inject: [AiModelConfigService],
+      useFactory: (config: AiModelConfigService) => {
+        const provider = config.getOptions().provider;
+
+        if (provider === "gemini") {
+          return new GeminiAiModelProvider(config);
+        }
+
+        return new PlaceholderAiModelProvider(config);
+      },
     },
   ],
 })

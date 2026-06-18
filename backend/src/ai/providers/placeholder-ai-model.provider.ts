@@ -1,10 +1,7 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 
 import { AiModelConfigService } from "../ai-model-config.service";
-import type {
-  AiModelCompletion,
-  AiModelProvider,
-} from "../types/ai-model";
+import type { AiModelCompletion, AiModelProvider } from "../types/ai-model";
 
 @Injectable()
 export class PlaceholderAiModelProvider implements AiModelProvider {

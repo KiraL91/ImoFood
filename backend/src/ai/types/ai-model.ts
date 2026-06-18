@@ -1,12 +1,22 @@
 export type AiModelOptions = {
+  apiKey?: string;
+  baseUrl: string;
   enabled: boolean;
+  maxOutputTokens: number;
   model: string;
   provider: string;
   temperature: number;
+  timeoutMs: number;
+};
+
+export type AiModelResponseFormat = {
+  mimeType: "application/json";
+  schema?: Record<string, unknown>;
 };
 
 export type AiModelPrompt = {
   metadata?: Record<string, unknown>;
+  responseFormat?: AiModelResponseFormat;
   system: string;
   user: string;
 };
