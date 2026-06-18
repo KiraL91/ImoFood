@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Server, Stethoscope } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TreatmentCard } from "@/components/treatments/treatment-card";
 import { TreatmentFormDialog } from "@/components/treatments/treatment-form-dialog";
 import { TreatmentLogFormDialog } from "@/components/treatments/treatment-log-form-dialog";
@@ -44,6 +45,10 @@ export function TreatmentsPanel() {
     TreatmentLog | undefined
   >();
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const openLogFromQuery = searchParams.get("openLog") === "1";
+  const openTreatmentFromQuery = searchParams.get("openTreatment") === "1";
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
   const canCreateTreatment = hasPermission("treatments:create");
@@ -154,6 +159,24 @@ export function TreatmentsPanel() {
         .includes(normalizedQuery),
     );
   }, [query, treatments]);
+
+  useEffect(() => {
+    if (!openLogFromQuery && !openTreatmentFromQuery) {
+      return;
+    }
+
+    setMutationError(null);
+
+    if (openLogFromQuery) {
+      setEditingTreatmentLog(undefined);
+      setIsLogDialogOpen(true);
+    } else {
+      setEditingTreatment(undefined);
+      setIsTreatmentDialogOpen(true);
+    }
+
+    router.replace("/treatments");
+  }, [openLogFromQuery, openTreatmentFromQuery, router]);
 
   async function handleTreatmentSubmit(input: CreateTreatmentInput) {
     setMutationError(null);

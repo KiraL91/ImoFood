@@ -52,6 +52,14 @@ type TimelineEvent = {
   title: string;
 };
 
+type FollowUpCard = {
+  action: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  title: string;
+};
+
 const timeFormatter = new Intl.DateTimeFormat("es-ES", {
   hour: "2-digit",
   minute: "2-digit",
@@ -260,16 +268,69 @@ export function TodayDashboard() {
       value: latestEvent ? formatTime(latestEvent.at) : "-",
     },
   ];
-  const reminders = [
-    latestMealLog && symptomsAfterLatestMeal
-      ? "La ultima ingesta ya tiene sintomas posteriores registrados."
-      : "La ultima ingesta todavia no tiene sintomas posteriores asociados.",
+  const latestMealLogQuery = latestMealLog
+    ? encodeURIComponent(latestMealLog.id)
+    : undefined;
+  const followUps: FollowUpCard[] = [
+    latestMealLog
+      ? symptomsAfterLatestMeal
+        ? {
+            action: "Ver sintomas",
+            description: "La ultima ingesta ya tiene sintomas posteriores registrados.",
+            href: "/symptoms",
+            icon: Activity,
+            title: "Sintomas revisados",
+          }
+        : {
+            action: "Registrar sintomas",
+            description:
+              "La ultima ingesta todavia no tiene sintomas posteriores asociados.",
+            href: `/symptoms?mealLogId=${latestMealLogQuery}`,
+            icon: Activity,
+            title: "Completar seguimiento",
+          }
+      : {
+          action: "Registrar ingesta",
+          description: "Registra una ingesta para poder relacionar sintomas despues.",
+          href: "/meal-logs?open=1",
+          icon: Utensils,
+          title: "Primera ingesta",
+        },
     activeTreatmentsCount > 0
-      ? `${activeTreatmentsCount} tratamientos activos para revisar en el seguimiento.`
-      : "No hay tratamientos activos registrados.",
+      ? {
+          action: "Registrar toma",
+          description: `${activeTreatmentsCount} tratamientos activos para revisar en el seguimiento.`,
+          href: "/treatments?openLog=1",
+          icon: Pill,
+          title: "Tratamientos activos",
+        }
+      : {
+          action: "Anadir tratamiento",
+          description: "No hay tratamientos activos registrados.",
+          href: "/treatments?openTreatment=1",
+          icon: Pill,
+          title: "Tratamiento pendiente",
+        },
     latestMealLog?.foods?.length
-      ? "La ultima ingesta incluye alimentos concretos para poder cruzarlos despues."
-      : "La ultima ingesta no tiene alimentos concretos asociados.",
+      ? {
+          action: "Ver ingesta",
+          description:
+            "La ultima ingesta incluye alimentos concretos para poder cruzarlos despues.",
+          href: "/meal-logs",
+          icon: Utensils,
+          title: "Alimentos asociados",
+        }
+      : {
+          action: latestMealLog ? "Completar ingesta" : "Registrar ingesta",
+          description: latestMealLog
+            ? "La ultima ingesta no tiene alimentos concretos asociados."
+            : "Anade alimentos concretos al registrar una ingesta.",
+          href: latestMealLog
+            ? `/meal-logs?editMealLogId=${latestMealLogQuery}`
+            : "/meal-logs?open=1",
+          icon: Utensils,
+          title: "Alimentos pendientes",
+        },
   ];
 
   return (
@@ -433,14 +494,35 @@ export function TodayDashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {reminders.map((reminder) => (
-              <div
-                key={reminder}
-                className="rounded-md border bg-background px-3 py-2 text-sm leading-6 text-muted-foreground"
-              >
-                {reminder}
-              </div>
-            ))}
+            {followUps.map((followUp) => {
+              const Icon = followUp.icon;
+
+              return (
+                <Link
+                  key={followUp.title}
+                  href={followUp.href}
+                  className="group flex flex-col gap-3 rounded-md border bg-background px-3 py-3 text-sm transition-colors hover:bg-muted sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <span className="flex min-w-0 gap-3">
+                    <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors group-hover:bg-background">
+                      <Icon className="size-4" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-medium text-foreground">
+                        {followUp.title}
+                      </span>
+                      <span className="mt-1 block leading-6 text-muted-foreground">
+                        {followUp.description}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1 font-medium text-primary">
+                    {followUp.action}
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </span>
+                </Link>
+              );
+            })}
             {latestMealLog && (
               <div className="rounded-md border bg-muted px-3 py-2 text-sm">
                 <p className="font-medium">{latestMealLog.description}</p>

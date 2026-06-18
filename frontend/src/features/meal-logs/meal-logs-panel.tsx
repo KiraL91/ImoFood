@@ -40,6 +40,8 @@ export function MealLogsPanel() {
   const searchParams = useSearchParams();
   const foodIdFromQuery = searchParams.get("foodId");
   const recipeIdFromQuery = searchParams.get("recipeId");
+  const openMealLogFromQuery = searchParams.get("open") === "1";
+  const editMealLogIdFromQuery = searchParams.get("editMealLogId");
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
   const canCreateMealLog = hasPermission("meal-logs:create");
@@ -131,7 +133,35 @@ export function MealLogsPanel() {
     hasBackendConfigured && isAuthenticated && canCreateSymptomLog;
 
   useEffect(() => {
-    if (!foodIdFromQuery && !recipeIdFromQuery) {
+    if (
+      !foodIdFromQuery &&
+      !recipeIdFromQuery &&
+      !openMealLogFromQuery &&
+      !editMealLogIdFromQuery
+    ) {
+      return;
+    }
+
+    if (editMealLogIdFromQuery) {
+      const mealLogToEdit = mealLogs.find(
+        (mealLog) => mealLog.id === editMealLogIdFromQuery,
+      );
+
+      if (!mealLogToEdit && mealLogsQuery.isLoading) {
+        return;
+      }
+
+      if (!mealLogToEdit) {
+        router.replace("/meal-logs");
+        return;
+      }
+
+      setEditingMealLog(mealLogToEdit);
+      setPrefilledFoodId(null);
+      setPrefilledRecipeId(null);
+      setMutationError(null);
+      setIsMealLogDialogOpen(true);
+      router.replace("/meal-logs");
       return;
     }
 
@@ -141,7 +171,15 @@ export function MealLogsPanel() {
     setMutationError(null);
     setIsMealLogDialogOpen(true);
     router.replace("/meal-logs");
-  }, [foodIdFromQuery, recipeIdFromQuery, router]);
+  }, [
+    editMealLogIdFromQuery,
+    foodIdFromQuery,
+    mealLogs,
+    mealLogsQuery.isLoading,
+    openMealLogFromQuery,
+    recipeIdFromQuery,
+    router,
+  ]);
 
   async function handleMealLogSubmit(input: CreateMealLogInput) {
     setMutationError(null);
