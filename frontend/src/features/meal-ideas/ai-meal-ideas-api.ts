@@ -5,9 +5,12 @@ import { apiClient } from "@/lib/api/client";
 export type GenerateAiMealIdeasInput = {
   avoidedTags?: string[];
   foodIds?: string[];
+  goal?: "balanced" | "quick" | "gentle" | "filling" | "low-risk" | "use-leftovers";
   limit?: number;
+  mealType?: "breakfast" | "lunch" | "dinner" | "snack";
   notes?: string;
   preferredTags?: string[];
+  variationSeed?: string;
 };
 
 const aiConfigurationSchema = z.object({

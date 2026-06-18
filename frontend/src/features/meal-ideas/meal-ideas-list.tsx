@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ListChecks,
   Loader2,
+  RefreshCw,
   Save,
   Search,
   Server,
@@ -32,7 +33,10 @@ import {
   useAiSuggestionsConfig,
   useGenerateAiMealIdeas,
 } from "@/features/meal-ideas/ai-meal-ideas-queries";
-import type { AiMealIdeaSuggestion } from "@/features/meal-ideas/ai-meal-ideas-api";
+import type {
+  AiMealIdeaSuggestion,
+  GenerateAiMealIdeasInput,
+} from "@/features/meal-ideas/ai-meal-ideas-api";
 import { buildMealIdeas } from "@/features/meal-ideas/meal-ideas-generator";
 import type { CreateRecipeInput } from "@/features/recipes/recipes-api";
 import { useCreateRecipe, useRecipes } from "@/features/recipes/recipes-queries";
@@ -41,6 +45,31 @@ import type { Food } from "@/lib/types/food";
 import { useAuth } from "@/providers/auth-provider";
 
 type SuggestionMode = "basic" | "ai";
+type AiMealTypePreference = "auto" | NonNullable<GenerateAiMealIdeasInput["mealType"]>;
+type AiGoalPreference = NonNullable<GenerateAiMealIdeasInput["goal"]>;
+
+const mealTypeOptions: Array<{
+  label: string;
+  value: AiMealTypePreference;
+}> = [
+  { label: "Automatico", value: "auto" },
+  { label: "Desayuno", value: "breakfast" },
+  { label: "Comida", value: "lunch" },
+  { label: "Cena", value: "dinner" },
+  { label: "Snack", value: "snack" },
+];
+
+const goalOptions: Array<{
+  label: string;
+  value: AiGoalPreference;
+}> = [
+  { label: "Equilibrado", value: "balanced" },
+  { label: "Rapido", value: "quick" },
+  { label: "Suave", value: "gentle" },
+  { label: "Saciante", value: "filling" },
+  { label: "Bajo riesgo", value: "low-risk" },
+  { label: "Aprovechar alimentos", value: "use-leftovers" },
+];
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error
@@ -79,6 +108,10 @@ function getUniqueItems(items: string[]) {
   );
 }
 
+function createVariationSeed() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function toRecipeDraft(suggestion: AiMealIdeaSuggestion): CreateRecipeInput {
   return {
     description: suggestion.reason,
@@ -98,6 +131,10 @@ function toRecipeDraft(suggestion: AiMealIdeaSuggestion): CreateRecipeInput {
 
 export function MealIdeasList() {
   const [mode, setMode] = useState<SuggestionMode>("basic");
+  const [mealTypePreference, setMealTypePreference] =
+    useState<AiMealTypePreference>("auto");
+  const [goalPreference, setGoalPreference] = useState<AiGoalPreference>("balanced");
+  const [aiNotes, setAiNotes] = useState("");
   const [selectedFoodIds, setSelectedFoodIds] = useState<Set<string>>(new Set());
   const [foodSearch, setFoodSearch] = useState("");
   const [selectedAiSuggestion, setSelectedAiSuggestion] =
@@ -205,11 +242,19 @@ export function MealIdeasList() {
     });
   }, [reasonableFoodIds]);
 
-  function handleGenerateAiIdeas() {
-    generateAiMealIdeas.mutate({
+  function buildAiMealIdeasInput(): GenerateAiMealIdeasInput {
+    return {
       foodIds: [...selectedFoodIds],
+      goal: goalPreference,
       limit: 3,
-    });
+      mealType: mealTypePreference === "auto" ? undefined : mealTypePreference,
+      notes: aiNotes.trim() || undefined,
+      variationSeed: createVariationSeed(),
+    };
+  }
+
+  function handleGenerateAiIdeas() {
+    generateAiMealIdeas.mutate(buildAiMealIdeasInput());
   }
 
   function handleSelectAllFoods() {
@@ -363,6 +408,53 @@ export function MealIdeasList() {
               </p>
             </div>
 
+            <div className="grid gap-3 md:grid-cols-[minmax(0,11rem)_minmax(0,13rem)_minmax(0,1fr)]">
+              <label className="grid gap-1.5 text-sm font-medium">
+                Momento
+                <select
+                  value={mealTypePreference}
+                  onChange={(event) =>
+                    setMealTypePreference(event.target.value as AiMealTypePreference)
+                  }
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {mealTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-1.5 text-sm font-medium">
+                Enfoque
+                <select
+                  value={goalPreference}
+                  onChange={(event) =>
+                    setGoalPreference(event.target.value as AiGoalPreference)
+                  }
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {goalOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-1.5 text-sm font-medium">
+                Notas opcionales
+                <textarea
+                  value={aiNotes}
+                  onChange={(event) => setAiNotes(event.target.value)}
+                  rows={2}
+                  className="min-h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  placeholder="Ej. algo caliente, sin huevo, muy sencillo"
+                />
+              </label>
+            </div>
+
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -464,6 +556,21 @@ export function MealIdeasList() {
                 )}
                 {generateAiMealIdeas.isPending ? "Generando..." : "Generar con IA"}
               </Button>
+              {aiMealIdeas.length > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!canGenerateWithAi}
+                  onClick={handleGenerateAiIdeas}
+                >
+                  {generateAiMealIdeas.isPending ? (
+                    <Loader2 className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <RefreshCw aria-hidden="true" />
+                  )}
+                  Regenerar diferente
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={() => setMode("basic")}>
                 Ver sugerencias sin IA
               </Button>

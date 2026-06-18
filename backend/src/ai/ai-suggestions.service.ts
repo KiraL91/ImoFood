@@ -223,11 +223,17 @@ export class AiSuggestionsService {
     context: MealIdeasContext,
   ): AiModelPrompt {
     const limit = createMealIdeasSuggestionDto.limit ?? 3;
+    const variationSeed =
+      createMealIdeasSuggestionDto.variationSeed?.trim() || undefined;
+    const promptContext = this.getPromptContext(context, variationSeed);
 
     return {
       metadata: {
         capability: "meal-ideas",
+        goal: createMealIdeasSuggestionDto.goal,
         limit,
+        mealType: createMealIdeasSuggestionDto.mealType,
+        variationSeed,
       },
       responseFormat: {
         mimeType: "application/json",
@@ -239,6 +245,8 @@ export class AiSuggestionsService {
         "No inventes alimentos que no existan en el contexto.",
         "No uses alimentos marcados como evitados por tags.",
         "Devuelve propuestas prudentes y faciles de revisar por el usuario.",
+        "Genera variedad real entre propuestas: cambia combinaciones, formato y preparacion cuando sea posible.",
+        "Si recibes una semilla de variacion, usala solo para proponer alternativas diferentes, no para inventar alimentos.",
         "No des consejo medico ni afirmes que una comida es universalmente segura.",
         "Devuelve exclusivamente JSON valido con la clave suggestions.",
       ].join("\n"),
@@ -246,13 +254,20 @@ export class AiSuggestionsService {
         {
           avoidedTags: createMealIdeasSuggestionDto.avoidedTags ?? [],
           context: {
-            highRatedRecipes: context.highRatedRecipes,
-            reasonableFoods: context.reasonableFoods,
-            safeFoods: context.safeFoods,
+            highRatedRecipes: promptContext.highRatedRecipes,
+            reasonableFoods: promptContext.reasonableFoods,
+            safeFoods: promptContext.safeFoods,
           },
+          goal: createMealIdeasSuggestionDto.goal ?? "balanced",
           limit,
+          mealType: createMealIdeasSuggestionDto.mealType ?? "any",
           notes: createMealIdeasSuggestionDto.notes?.trim() || undefined,
           preferredTags: createMealIdeasSuggestionDto.preferredTags ?? [],
+          variationGuidance: {
+            avoidRepeatingObviousTopCombinations: true,
+            seed: variationSeed,
+            useDifferentFoodCombinationsAcrossSuggestions: true,
+          },
           responseFormat: {
             suggestions: [
               {
@@ -271,6 +286,56 @@ export class AiSuggestionsService {
         2,
       ),
     };
+  }
+
+  private getPromptContext(
+    context: MealIdeasContext,
+    variationSeed?: string,
+  ): Omit<MealIdeasContext, "blockedFoods"> {
+    return {
+      highRatedRecipes: this.orderForPrompt(
+        context.highRatedRecipes,
+        variationSeed,
+        "recipes",
+      ),
+      reasonableFoods: this.orderForPrompt(
+        context.reasonableFoods,
+        variationSeed,
+        "reasonable-foods",
+      ),
+      safeFoods: this.orderForPrompt(
+        context.safeFoods,
+        variationSeed,
+        "safe-foods",
+      ),
+    };
+  }
+
+  private orderForPrompt<T>(
+    items: T[],
+    variationSeed?: string,
+    scope = "",
+  ): T[] {
+    if (!variationSeed || items.length <= 1) {
+      return items;
+    }
+
+    const offset = this.getStableOffset(
+      `${variationSeed}:${scope}`,
+      items.length,
+    );
+
+    return [...items.slice(offset), ...items.slice(0, offset)];
+  }
+
+  private getStableOffset(value: string, modulo: number): number {
+    let hash = 0;
+
+    for (const character of value) {
+      hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+    }
+
+    return hash % modulo;
   }
 
   private parseMealIdeasSuggestions(

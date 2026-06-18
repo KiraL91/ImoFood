@@ -4,7 +4,7 @@ import type { AiModelOptions } from "./types/ai-model";
 
 const defaultBaseUrl = "https://generativelanguage.googleapis.com";
 const defaultMaxOutputTokens = 1200;
-const defaultTemperature = 0.2;
+const defaultTemperature = 0.6;
 const defaultTimeoutMs = 12_000;
 
 @Injectable()
