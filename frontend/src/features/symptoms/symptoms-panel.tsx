@@ -82,6 +82,7 @@ export function SymptomsPanel() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mealLogIdFromQuery = searchParams.get("mealLogId");
+  const openSymptomLogFromQuery = searchParams.get("open") === "1";
   const foodIdFromQuery = searchParams.get("foodId");
   const foodNameFromQuery = searchParams.get("foodName");
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
@@ -215,7 +216,7 @@ export function SymptomsPanel() {
     hasBackendConfigured && isAuthenticated && canCreateSymptomLog;
 
   useEffect(() => {
-    if (!mealLogIdFromQuery) {
+    if (!mealLogIdFromQuery && !openSymptomLogFromQuery) {
       return;
     }
 
@@ -224,7 +225,7 @@ export function SymptomsPanel() {
     setMutationError(null);
     setIsSymptomLogDialogOpen(true);
     router.replace("/symptoms");
-  }, [mealLogIdFromQuery, router]);
+  }, [mealLogIdFromQuery, openSymptomLogFromQuery, router]);
 
   async function handleSymptomLogSubmit(input: CreateSymptomLogInput) {
     setMutationError(null);
