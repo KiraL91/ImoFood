@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, ListChecks, Server, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  AlertCircle,
+  Brain,
+  ListChecks,
+  Loader2,
+  Server,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { MealIdeaCard } from "@/components/meal-ideas/meal-idea-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +21,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useFoods } from "@/features/foods/foods-queries";
+import {
+  useAiSuggestionsConfig,
+  useGenerateAiMealIdeas,
+} from "@/features/meal-ideas/ai-meal-ideas-queries";
 import { buildMealIdeas } from "@/features/meal-ideas/meal-ideas-generator";
 import { useRecipes } from "@/features/recipes/recipes-queries";
 import { env } from "@/lib/env";
@@ -43,6 +55,8 @@ export function MealIdeasList() {
   const [mode, setMode] = useState<SuggestionMode>("basic");
   const foodsQuery = useFoods();
   const recipesQuery = useRecipes();
+  const aiConfigQuery = useAiSuggestionsConfig();
+  const generateAiMealIdeas = useGenerateAiMealIdeas();
   const isLoading = foodsQuery.isLoading || recipesQuery.isLoading;
   const errors = [foodsQuery.error, recipesQuery.error].filter(Boolean);
   const foods = foodsQuery.data ?? [];
@@ -55,6 +69,34 @@ export function MealIdeasList() {
   const reasonableFoods = getReasonableFoods(foods);
   const goodRecipes = recipes.filter((recipe) => recipe.rating && recipe.rating >= 4);
   const isAiMode = mode === "ai";
+  const hasApiBaseUrl = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
+  const aiConfig = aiConfigQuery.data;
+  const isAiReady = aiConfig?.status === "ready";
+  const canGenerateWithAi = hasApiBaseUrl && isAiReady && !generateAiMealIdeas.isPending;
+  const aiMealIdeas =
+    generateAiMealIdeas.data?.suggestions.map((suggestion, index) => ({
+      id: `ai-${index}-${suggestion.title}`,
+      items: suggestion.items,
+      reason: suggestion.reason,
+      tags: Array.from(new Set([...suggestion.tags, "ia"])),
+      title: suggestion.title,
+    })) ?? [];
+
+  const aiStatusText = !hasApiBaseUrl
+    ? "Configura NEXT_PUBLIC_API_BASE_URL para usar el backend."
+    : aiConfigQuery.isLoading
+      ? "Comprobando configuracion de IA..."
+      : aiConfigQuery.error
+        ? getErrorMessage(aiConfigQuery.error)
+        : aiConfig?.status === "ready"
+          ? `Conectado a ${aiConfig.provider} / ${aiConfig.model}.`
+          : "El backend esta conectado, pero la IA no esta activada.";
+
+  function handleGenerateAiIdeas() {
+    generateAiMealIdeas.mutate({
+      limit: 3,
+    });
+  }
 
   return (
     <div className="space-y-5">
@@ -63,8 +105,8 @@ export function MealIdeasList() {
           <div>
             <h3 className="text-base font-semibold">Modo de sugerencia</h3>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              El modo basico usa reglas locales. El modo IA queda preparado para generar
-              recetas a partir de alimentos seguros y razonables.
+              El modo basico usa reglas locales. El modo IA consulta el backend y valida
+              las respuestas antes de mostrarlas.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 rounded-md border bg-background p-1">
@@ -113,9 +155,7 @@ export function MealIdeasList() {
               </div>
               <div>
                 <CardTitle>Generacion avanzada con IA</CardTitle>
-                <CardDescription>
-                  Preparado para conectar un proveedor local o gratuito mas adelante.
-                </CardDescription>
+                <CardDescription>{aiStatusText}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -141,9 +181,9 @@ export function MealIdeasList() {
                 Validacion previa
               </span>
               <p>
-                La IA solo deberia recibir alimentos permitidos o razonables y recetas
-                existentes. Despues, la respuesta se validara contra tu lista antes de
-                mostrarse como sugerencia.
+                El backend envia solo alimentos permitidos o razonables y recetas
+                existentes. No se envian sintomas, tratamientos ni notas personales desde
+                esta pantalla.
               </p>
             </div>
 
@@ -162,14 +202,29 @@ export function MealIdeasList() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button type="button" disabled>
-                <Sparkles aria-hidden="true" />
-                Generar con IA
+              <Button
+                type="button"
+                disabled={!canGenerateWithAi}
+                onClick={handleGenerateAiIdeas}
+              >
+                {generateAiMealIdeas.isPending ? (
+                  <Loader2 className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Sparkles aria-hidden="true" />
+                )}
+                {generateAiMealIdeas.isPending ? "Generando..." : "Generar con IA"}
               </Button>
               <Button type="button" variant="outline" onClick={() => setMode("basic")}>
                 Ver sugerencias sin IA
               </Button>
             </div>
+
+            {generateAiMealIdeas.error && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <p>{getErrorMessage(generateAiMealIdeas.error)}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -190,6 +245,23 @@ export function MealIdeasList() {
 
       {!isLoading && mealIdeas.length > 0 && isAiMode && (
         <section className="space-y-3">
+          {aiMealIdeas.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-base font-semibold">Sugerencias generadas con IA</h3>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Revisa cada propuesta con tu tolerancia personal antes de registrarla o
+                  convertirla en receta.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {aiMealIdeas.map((mealIdea) => (
+                  <MealIdeaCard key={mealIdea.id} mealIdea={mealIdea} />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <h3 className="text-base font-semibold">Sugerencias base disponibles</h3>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
