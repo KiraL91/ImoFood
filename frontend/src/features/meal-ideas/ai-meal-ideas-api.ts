@@ -4,6 +4,7 @@ import { apiClient } from "@/lib/api/client";
 
 export type GenerateAiMealIdeasInput = {
   avoidedTags?: string[];
+  foodIds?: string[];
   limit?: number;
   notes?: string;
   preferredTags?: string[];

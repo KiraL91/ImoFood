@@ -1,5 +1,6 @@
 import {
   BadGatewayException,
+  BadRequestException,
   Inject,
   Injectable,
   ServiceUnavailableException,
@@ -29,6 +30,7 @@ type MealIdeasContext = {
     tags: string[];
   }>;
   reasonableFoods: Array<{
+    id: string;
     name: string;
     status: string;
     suggestedServing: string | null;
@@ -36,6 +38,7 @@ type MealIdeasContext = {
     tolerance: number;
   }>;
   safeFoods: Array<{
+    id: string;
     name: string;
     suggestedServing: string | null;
     tags: string[];
@@ -66,7 +69,9 @@ export class AiSuggestionsService {
   async generateMealIdeas(
     createMealIdeasSuggestionDto: CreateMealIdeasSuggestionDto,
   ): Promise<AiMealIdeasSuggestionResult> {
-    const context = await this.getMealIdeasContext();
+    const context = await this.getMealIdeasContext(
+      createMealIdeasSuggestionDto.foodIds,
+    );
     const summary = this.getContextSummary(context);
 
     if (!this.modelProvider.isEnabled()) {
@@ -94,7 +99,18 @@ export class AiSuggestionsService {
     };
   }
 
-  private async getMealIdeasContext(): Promise<MealIdeasContext> {
+  private async getMealIdeasContext(
+    foodIds?: string[],
+  ): Promise<MealIdeasContext> {
+    const selectedFoodIds = this.normalizeFoodIds(foodIds);
+    const hasSelectedFoods = selectedFoodIds.length > 0;
+    const selectedFoodWhere = hasSelectedFoods
+      ? {
+          id: {
+            in: selectedFoodIds,
+          },
+        }
+      : {};
     const [safeFoods, reasonableFoods, blockedFoods, highRatedRecipes] =
       await Promise.all([
         this.prisma.food.findMany({
@@ -102,12 +118,14 @@ export class AiSuggestionsService {
             name: "asc",
           },
           select: {
+            id: true,
             name: true,
             suggestedServing: true,
             tags: true,
             tolerance: true,
           },
           where: {
+            ...selectedFoodWhere,
             status: FoodStatus.allowed,
             tolerance: {
               gte: 4,
@@ -119,6 +137,7 @@ export class AiSuggestionsService {
             name: "asc",
           },
           select: {
+            id: true,
             name: true,
             status: true,
             suggestedServing: true,
@@ -126,6 +145,7 @@ export class AiSuggestionsService {
             tolerance: true,
           },
           where: {
+            ...selectedFoodWhere,
             status: {
               in: [FoodStatus.allowed, FoodStatus.testing],
             },
@@ -173,6 +193,12 @@ export class AiSuggestionsService {
           },
         }),
       ]);
+
+    if (hasSelectedFoods && reasonableFoods.length === 0) {
+      throw new BadRequestException(
+        "Selected foods do not include any allowed or testing food with enough tolerance.",
+      );
+    }
 
     return {
       blockedFoods,
@@ -441,5 +467,15 @@ export class AiSuggestionsService {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
+  }
+
+  private normalizeFoodIds(foodIds?: string[]): string[] {
+    return Array.from(
+      new Set(
+        (foodIds ?? [])
+          .map((foodId) => foodId.trim())
+          .filter((foodId) => foodId.length > 0),
+      ),
+    );
   }
 }

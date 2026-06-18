@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Brain,
   Check,
+  CheckCircle2,
   ListChecks,
   Loader2,
   Save,
+  Search,
   Server,
   ShieldCheck,
   Sparkles,
+  X,
 } from "lucide-react";
 import { MealIdeaCard } from "@/components/meal-ideas/meal-idea-card";
 import { RecipeFormDialog } from "@/components/recipes/recipe-form-dialog";
@@ -23,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useFoods } from "@/features/foods/foods-queries";
 import {
   useAiSuggestionsConfig,
@@ -57,6 +61,14 @@ function getReasonableFoods(foods: Food[]) {
   );
 }
 
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function getAiSuggestionKey(suggestion: AiMealIdeaSuggestion) {
   return `${suggestion.title}-${suggestion.items.join("|")}`;
 }
@@ -86,6 +98,8 @@ function toRecipeDraft(suggestion: AiMealIdeaSuggestion): CreateRecipeInput {
 
 export function MealIdeasList() {
   const [mode, setMode] = useState<SuggestionMode>("basic");
+  const [selectedFoodIds, setSelectedFoodIds] = useState<Set<string>>(new Set());
+  const [foodSearch, setFoodSearch] = useState("");
   const [selectedAiSuggestion, setSelectedAiSuggestion] =
     useState<AiMealIdeaSuggestion | null>(null);
   const [savedAiSuggestionKeys, setSavedAiSuggestionKeys] = useState<Set<string>>(
@@ -100,20 +114,47 @@ export function MealIdeasList() {
   const { hasPermission, isAuthenticated } = useAuth();
   const isLoading = foodsQuery.isLoading || recipesQuery.isLoading;
   const errors = [foodsQuery.error, recipesQuery.error].filter(Boolean);
-  const foods = foodsQuery.data ?? [];
-  const recipes = recipesQuery.data ?? [];
+  const foods = useMemo(() => foodsQuery.data ?? [], [foodsQuery.data]);
+  const recipes = useMemo(() => recipesQuery.data ?? [], [recipesQuery.data]);
   const mealIdeas = buildMealIdeas({
     foods,
     recipes,
   });
-  const safeFoods = getSafeFoods(foods);
-  const reasonableFoods = getReasonableFoods(foods);
+  const safeFoods = useMemo(() => getSafeFoods(foods), [foods]);
+  const reasonableFoods = useMemo(() => getReasonableFoods(foods), [foods]);
+  const reasonableFoodIds = useMemo(
+    () => reasonableFoods.map((food) => food.id),
+    [reasonableFoods],
+  );
+  const selectedReasonableFoods = useMemo(
+    () => reasonableFoods.filter((food) => selectedFoodIds.has(food.id)),
+    [reasonableFoods, selectedFoodIds],
+  );
+  const filteredReasonableFoods = useMemo(() => {
+    const normalizedSearch = normalizeSearch(foodSearch);
+
+    if (!normalizedSearch) {
+      return reasonableFoods.slice(0, 24);
+    }
+
+    return reasonableFoods
+      .filter((food) =>
+        normalizeSearch(
+          [food.name, food.category, food.tags.join(" ")].join(" "),
+        ).includes(normalizedSearch),
+      )
+      .slice(0, 24);
+  }, [foodSearch, reasonableFoods]);
   const goodRecipes = recipes.filter((recipe) => recipe.rating && recipe.rating >= 4);
   const isAiMode = mode === "ai";
   const hasApiBaseUrl = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const aiConfig = aiConfigQuery.data;
   const isAiReady = aiConfig?.status === "ready";
-  const canGenerateWithAi = hasApiBaseUrl && isAiReady && !generateAiMealIdeas.isPending;
+  const canGenerateWithAi =
+    hasApiBaseUrl &&
+    isAiReady &&
+    selectedFoodIds.size > 0 &&
+    !generateAiMealIdeas.isPending;
   const canCreateRecipeFromAi =
     hasApiBaseUrl && isAuthenticated && hasPermission("recipes:create");
   const saveRecipeDisabledReason = !hasApiBaseUrl
@@ -151,9 +192,45 @@ export function MealIdeasList() {
           ? `Conectado a ${aiConfig.provider} / ${aiConfig.model}.`
           : "El backend esta conectado, pero la IA no esta activada.";
 
+  useEffect(() => {
+    setSelectedFoodIds((current) => {
+      const availableFoodIds = new Set(reasonableFoodIds);
+      const keptFoodIds = [...current].filter((foodId) => availableFoodIds.has(foodId));
+
+      if (keptFoodIds.length > 0 || reasonableFoodIds.length === 0) {
+        return new Set(keptFoodIds);
+      }
+
+      return new Set(reasonableFoodIds);
+    });
+  }, [reasonableFoodIds]);
+
   function handleGenerateAiIdeas() {
     generateAiMealIdeas.mutate({
+      foodIds: [...selectedFoodIds],
       limit: 3,
+    });
+  }
+
+  function handleSelectAllFoods() {
+    setSelectedFoodIds(new Set(reasonableFoodIds));
+  }
+
+  function handleClearFoodSelection() {
+    setSelectedFoodIds(new Set());
+  }
+
+  function handleToggleFood(foodId: string) {
+    setSelectedFoodIds((current) => {
+      const nextFoodIds = new Set(current);
+
+      if (nextFoodIds.has(foodId)) {
+        nextFoodIds.delete(foodId);
+      } else {
+        nextFoodIds.add(foodId);
+      }
+
+      return nextFoodIds;
     });
   }
 
@@ -287,15 +364,84 @@ export function MealIdeasList() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium">Contexto que se usaria</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Alimentos enviados a la IA</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Por defecto se seleccionan todos los alimentos razonables. Puedes
+                    acotar la lista antes de generar.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={reasonableFoodIds.length === selectedFoodIds.size}
+                    onClick={handleSelectAllFoods}
+                  >
+                    <CheckCircle2 aria-hidden="true" />
+                    Todos
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={selectedFoodIds.size === 0}
+                    onClick={handleClearFoodSelection}
+                  >
+                    <X aria-hidden="true" />
+                    Limpiar
+                  </Button>
+                </div>
+              </div>
+
+              <label className="relative block">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  value={foodSearch}
+                  onChange={(event) => setFoodSearch(event.target.value)}
+                  className="pl-9"
+                  placeholder="Buscar alimento para enviar"
+                  aria-label="Buscar alimento para enviar a la IA"
+                />
+              </label>
+
               <div className="flex flex-wrap gap-2">
-                {safeFoods.slice(0, 10).map((food) => (
-                  <Badge key={food.id} variant="secondary">
+                {filteredReasonableFoods.map((food) => {
+                  const isSelected = selectedFoodIds.has(food.id);
+
+                  return (
+                    <Button
+                      key={food.id}
+                      type="button"
+                      size="sm"
+                      variant={isSelected ? "default" : "outline"}
+                      onClick={() => handleToggleFood(food.id)}
+                    >
+                      {isSelected && <Check aria-hidden="true" />}
+                      {food.name}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                <Badge variant={selectedFoodIds.size > 0 ? "secondary" : "outline"}>
+                  {selectedFoodIds.size} de {reasonableFoods.length} seleccionados
+                </Badge>
+                {selectedReasonableFoods.slice(0, 8).map((food) => (
+                  <Badge key={food.id} variant="outline">
                     {food.name}
                   </Badge>
                 ))}
-                {safeFoods.length > 10 && (
-                  <Badge variant="outline">+{safeFoods.length - 10} mas</Badge>
+                {selectedReasonableFoods.length > 8 && (
+                  <Badge variant="outline">
+                    +{selectedReasonableFoods.length - 8} mas
+                  </Badge>
                 )}
               </div>
             </div>
@@ -304,6 +450,11 @@ export function MealIdeasList() {
               <Button
                 type="button"
                 disabled={!canGenerateWithAi}
+                title={
+                  selectedFoodIds.size > 0
+                    ? "Generar con IA"
+                    : "Selecciona al menos un alimento para generar con IA."
+                }
                 onClick={handleGenerateAiIdeas}
               >
                 {generateAiMealIdeas.isPending ? (
