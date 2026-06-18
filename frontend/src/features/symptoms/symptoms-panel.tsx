@@ -82,6 +82,8 @@ export function SymptomsPanel() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mealLogIdFromQuery = searchParams.get("mealLogId");
+  const foodIdFromQuery = searchParams.get("foodId");
+  const foodNameFromQuery = searchParams.get("foodName");
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
   const canCreateSymptomLog = hasPermission("symptom-logs:create");
@@ -100,6 +102,36 @@ export function SymptomsPanel() {
     () => (hasBackendConfigured && !isAuthenticated ? [] : (mealLogsQuery.data ?? [])),
     [hasBackendConfigured, isAuthenticated, mealLogsQuery.data],
   );
+  const foodFilteredMealLogIds = useMemo(() => {
+    if (!foodIdFromQuery) {
+      return new Set<string>();
+    }
+
+    return new Set(
+      mealLogs
+        .filter((mealLog) => {
+          const hasFoodById = mealLog.foodIds?.includes(foodIdFromQuery) ?? false;
+          const hasFoodByRelation =
+            mealLog.foods?.some((food) => food.id === foodIdFromQuery) ?? false;
+
+          return hasFoodById || hasFoodByRelation;
+        })
+        .map((mealLog) => mealLog.id),
+    );
+  }, [foodIdFromQuery, mealLogs]);
+  const selectedFoodName = useMemo(() => {
+    if (foodNameFromQuery) {
+      return foodNameFromQuery;
+    }
+
+    if (!foodIdFromQuery) {
+      return undefined;
+    }
+
+    return mealLogs
+      .flatMap((mealLog) => mealLog.foods ?? [])
+      .find((food) => food.id === foodIdFromQuery)?.name;
+  }, [foodIdFromQuery, foodNameFromQuery, mealLogs]);
   const latestSymptomLog = symptomLogs[0];
   const latestHighestSignal = useMemo(() => {
     if (!latestSymptomLog) {
@@ -109,7 +141,7 @@ export function SymptomsPanel() {
     return getHighestSymptomSignal(latestSymptomLog);
   }, [latestSymptomLog]);
   const hasSymptomFilters = Boolean(
-    dateFrom || dateTo || minimumSeverity > 0 || primarySymptomKey,
+    dateFrom || dateTo || minimumSeverity > 0 || primarySymptomKey || foodIdFromQuery,
   );
   const isDateRangeInvalid = Boolean(dateFrom && dateTo && dateFrom > dateTo);
   const filteredSymptomLogs = useMemo(() => {
@@ -123,6 +155,7 @@ export function SymptomsPanel() {
     return symptomLogs.filter((symptomLog) => {
       const loggedAt = new Date(symptomLog.loggedAt);
       const highestSignal = getHighestSymptomSignal(symptomLog);
+      const relatedMealLogId = symptomLog.mealLogId ?? symptomLog.mealLog?.id;
 
       if (fromDate && loggedAt < fromDate) {
         return false;
@@ -140,11 +173,20 @@ export function SymptomsPanel() {
         return false;
       }
 
+      if (
+        foodIdFromQuery &&
+        (!relatedMealLogId || !foodFilteredMealLogIds.has(relatedMealLogId))
+      ) {
+        return false;
+      }
+
       return true;
     });
   }, [
     dateFrom,
     dateTo,
+    foodFilteredMealLogIds,
+    foodIdFromQuery,
     isDateRangeInvalid,
     minimumSeverity,
     primarySymptomKey,
@@ -258,6 +300,10 @@ export function SymptomsPanel() {
     setDateTo("");
     setMinimumSeverity(0);
     setPrimarySymptomKey("");
+
+    if (foodIdFromQuery) {
+      router.replace("/symptoms");
+    }
   }
 
   return (
@@ -391,6 +437,26 @@ export function SymptomsPanel() {
           <p className="mt-3 text-sm text-muted-foreground">
             Mostrando {filteredSymptomLogs.length} de {symptomLogs.length} entradas.
           </p>
+        )}
+
+        {foodIdFromQuery && (
+          <div className="mt-3 flex flex-col gap-3 rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Filtrado por alimento:{" "}
+              <span className="font-medium text-foreground">
+                {selectedFoodName ?? "alimento seleccionado"}
+              </span>
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClearSymptomFilters}
+            >
+              <RotateCcw aria-hidden="true" />
+              Quitar filtro
+            </Button>
+          </div>
         )}
       </section>
 

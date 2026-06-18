@@ -1,4 +1,4 @@
-import { Pencil, Scale, Trash2, Utensils } from "lucide-react";
+import { Eye, Pencil, Trash2, Utensils } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ type FoodCardProps = {
   onDelete?: (food: Food) => void;
   onEdit?: (food: Food) => void;
   onRegisterMeal?: (food: Food) => void;
+  onViewDetails?: (food: Food) => void;
 };
 
 export function FoodCard({
@@ -26,13 +27,16 @@ export function FoodCard({
   onDelete,
   onEdit,
   onRegisterMeal,
+  onViewDetails,
 }: FoodCardProps) {
   const status = foodStatusMeta[food.status];
-  const showActions = canEdit || canDelete || canRegisterMeal;
+  const visibleTags = food.tags.slice(0, 3);
+  const hiddenTagsCount = food.tags.length - visibleTags.length;
+  const showActions = canEdit || canDelete || canRegisterMeal || onViewDetails;
 
   return (
     <Card className="h-full">
-      <CardHeader>
+      <CardHeader className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <CardTitle>{food.name}</CardTitle>
@@ -43,7 +47,18 @@ export function FoodCard({
           </Badge>
         </div>
         {showActions && (
-          <div className="mt-3 flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {onViewDetails && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onViewDetails(food)}
+              >
+                <Eye aria-hidden="true" />
+                Detalle
+              </Button>
+            )}
             {canRegisterMeal && (
               <Button
                 type="button"
@@ -81,19 +96,7 @@ export function FoodCard({
           </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
-        {food.notes && (
-          <p className="text-sm leading-6 text-muted-foreground">{food.notes}</p>
-        )}
-        {food.suggestedServing && (
-          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
-            <div className="mb-1 flex items-center gap-2 font-medium">
-              <Scale className="size-4 text-muted-foreground" aria-hidden="true" />
-              <span>Racion sugerida</span>
-            </div>
-            <p className="leading-6 text-muted-foreground">{food.suggestedServing}</p>
-          </div>
-        )}
+      <CardContent className="space-y-3">
         <div>
           <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">
             <span>Tolerancia</span>
@@ -112,11 +115,12 @@ export function FoodCard({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {food.tags.map((tag) => (
+          {visibleTags.map((tag) => (
             <Badge key={tag} variant="secondary">
               {tag}
             </Badge>
           ))}
+          {hiddenTagsCount > 0 && <Badge variant="outline">+{hiddenTagsCount}</Badge>}
         </div>
       </CardContent>
     </Card>

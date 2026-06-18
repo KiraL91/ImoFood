@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Plus, Search, Server } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FoodCard } from "@/components/foods/food-card";
+import { FoodDetailDialog } from "@/components/foods/food-detail-dialog";
 import { FoodFormDialog } from "@/components/foods/food-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ export function FoodsExplorer() {
   const [status, setStatus] = useState<FilterValue>("all");
   const [isFoodDialogOpen, setIsFoodDialogOpen] = useState(false);
   const [editingFood, setEditingFood] = useState<Food | undefined>();
+  const [detailFood, setDetailFood] = useState<Food | undefined>();
   const [mutationError, setMutationError] = useState<string | null>(null);
   const router = useRouter();
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
@@ -113,6 +115,10 @@ export function FoodsExplorer() {
     setIsFoodDialogOpen(true);
   }
 
+  function handleOpenFoodDetail(food: Food) {
+    setDetailFood(food);
+  }
+
   function handleFoodDialogOpenChange(open: boolean) {
     setIsFoodDialogOpen(open);
 
@@ -137,6 +143,10 @@ export function FoodsExplorer() {
       if (editingFood?.id === food.id) {
         setEditingFood(undefined);
       }
+
+      if (detailFood?.id === food.id) {
+        setDetailFood(undefined);
+      }
     } catch (error) {
       setMutationError(getErrorMessage(error));
     }
@@ -148,6 +158,18 @@ export function FoodsExplorer() {
 
   return (
     <div className="space-y-5">
+      <FoodDetailDialog
+        canRegisterMeal={canRegisterMealLog}
+        food={detailFood}
+        isOpen={Boolean(detailFood)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailFood(undefined);
+          }
+        }}
+        onRegisterMeal={handleRegisterMeal}
+      />
+
       <FoodFormDialog
         disabledReason={disabledReason}
         errorMessage={mutationError}
@@ -276,6 +298,7 @@ export function FoodsExplorer() {
             onDelete={handleDeleteFood}
             onEdit={handleOpenEditFoodDialog}
             onRegisterMeal={handleRegisterMeal}
+            onViewDetails={handleOpenFoodDetail}
           />
         ))}
       </section>
