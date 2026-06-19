@@ -137,6 +137,8 @@ export function MealIdeasList() {
   const [aiNotes, setAiNotes] = useState("");
   const [selectedFoodIds, setSelectedFoodIds] = useState<Set<string>>(new Set());
   const [foodSearch, setFoodSearch] = useState("");
+  const [foodCategoryFilter, setFoodCategoryFilter] = useState("all");
+  const [showOnlySelectedFoods, setShowOnlySelectedFoods] = useState(false);
   const [selectedAiSuggestion, setSelectedAiSuggestion] =
     useState<AiMealIdeaSuggestion | null>(null);
   const [savedAiSuggestionKeys, setSavedAiSuggestionKeys] = useState<Set<string>>(
@@ -167,21 +169,47 @@ export function MealIdeasList() {
     () => reasonableFoods.filter((food) => selectedFoodIds.has(food.id)),
     [reasonableFoods, selectedFoodIds],
   );
+  const foodCategories = useMemo(
+    () =>
+      Array.from(new Set(reasonableFoods.map((food) => food.category)))
+        .filter(Boolean)
+        .sort((leftCategory, rightCategory) =>
+          leftCategory.localeCompare(rightCategory, "es"),
+        ),
+    [reasonableFoods],
+  );
   const filteredReasonableFoods = useMemo(() => {
     const normalizedSearch = normalizeSearch(foodSearch);
 
-    if (!normalizedSearch) {
-      return reasonableFoods.slice(0, 24);
-    }
-
     return reasonableFoods
       .filter((food) =>
-        normalizeSearch(
-          [food.name, food.category, food.tags.join(" ")].join(" "),
-        ).includes(normalizedSearch),
+        [
+          foodCategoryFilter === "all" || food.category === foodCategoryFilter,
+          !showOnlySelectedFoods || selectedFoodIds.has(food.id),
+          !normalizedSearch ||
+            normalizeSearch(
+              [food.name, food.category, food.tags.join(" ")].join(" "),
+            ).includes(normalizedSearch),
+        ].every(Boolean),
       )
-      .slice(0, 24);
-  }, [foodSearch, reasonableFoods]);
+      .sort((leftFood, rightFood) => leftFood.name.localeCompare(rightFood.name, "es"));
+  }, [
+    foodCategoryFilter,
+    foodSearch,
+    reasonableFoods,
+    selectedFoodIds,
+    showOnlySelectedFoods,
+  ]);
+  const filteredReasonableFoodIds = useMemo(
+    () => filteredReasonableFoods.map((food) => food.id),
+    [filteredReasonableFoods],
+  );
+  const selectedFilteredFoodIdsCount = filteredReasonableFoodIds.filter((foodId) =>
+    selectedFoodIds.has(foodId),
+  ).length;
+  const hasFoodSelectionFilters = Boolean(
+    foodSearch || foodCategoryFilter !== "all" || showOnlySelectedFoods,
+  );
   const goodRecipes = recipes.filter((recipe) => recipe.rating && recipe.rating >= 4);
   const isAiMode = mode === "ai";
   const hasApiBaseUrl = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
@@ -263,6 +291,32 @@ export function MealIdeasList() {
 
   function handleClearFoodSelection() {
     setSelectedFoodIds(new Set());
+  }
+
+  function handleSelectVisibleFoods() {
+    setSelectedFoodIds((current) => {
+      const nextFoodIds = new Set(current);
+
+      filteredReasonableFoodIds.forEach((foodId) => nextFoodIds.add(foodId));
+
+      return nextFoodIds;
+    });
+  }
+
+  function handleClearVisibleFoodSelection() {
+    setSelectedFoodIds((current) => {
+      const nextFoodIds = new Set(current);
+
+      filteredReasonableFoodIds.forEach((foodId) => nextFoodIds.delete(foodId));
+
+      return nextFoodIds;
+    });
+  }
+
+  function handleClearFoodSelectionFilters() {
+    setFoodSearch("");
+    setFoodCategoryFilter("all");
+    setShowOnlySelectedFoods(false);
   }
 
   function handleToggleFood(foodId: string) {
@@ -460,82 +514,174 @@ export function MealIdeasList() {
                 <div>
                   <p className="text-sm font-medium">Alimentos enviados a la IA</p>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Por defecto se seleccionan todos los alimentos razonables. Puedes
-                    acotar la lista antes de generar.
+                    Por defecto se seleccionan todos los alimentos razonables. Usa
+                    busqueda y categoria para acotar lotes grandes.
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={reasonableFoodIds.length === selectedFoodIds.size}
-                    onClick={handleSelectAllFoods}
+                <Badge variant={selectedFoodIds.size > 0 ? "secondary" : "outline"}>
+                  {selectedFoodIds.size} de {reasonableFoods.length} seleccionados
+                </Badge>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,14rem)_auto]">
+                <label className="relative block">
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    value={foodSearch}
+                    onChange={(event) => setFoodSearch(event.target.value)}
+                    className="pl-9"
+                    placeholder="Buscar alimento o etiqueta"
+                    aria-label="Buscar alimento para enviar a la IA"
+                  />
+                </label>
+
+                <label className="grid gap-1.5 text-sm font-medium lg:gap-0">
+                  <span className="sr-only">Categoria</span>
+                  <select
+                    value={foodCategoryFilter}
+                    onChange={(event) => setFoodCategoryFilter(event.target.value)}
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
-                    <CheckCircle2 aria-hidden="true" />
-                    Todos
-                  </Button>
+                    <option value="all">Todas las categorias</option>
+                    {foodCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <Button
+                  type="button"
+                  variant={showOnlySelectedFoods ? "default" : "outline"}
+                  onClick={() => setShowOnlySelectedFoods((current) => !current)}
+                >
+                  {showOnlySelectedFoods && <Check aria-hidden="true" />}
+                  Solo seleccionados
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={reasonableFoodIds.length === selectedFoodIds.size}
+                  onClick={handleSelectAllFoods}
+                >
+                  <CheckCircle2 aria-hidden="true" />
+                  Seleccionar todos
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={selectedFoodIds.size === 0}
+                  onClick={handleClearFoodSelection}
+                >
+                  <X aria-hidden="true" />
+                  Quitar todos
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={
+                    filteredReasonableFoods.length === 0 ||
+                    selectedFilteredFoodIdsCount === filteredReasonableFoods.length
+                  }
+                  onClick={handleSelectVisibleFoods}
+                >
+                  Seleccionar visibles
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={selectedFilteredFoodIdsCount === 0}
+                  onClick={handleClearVisibleFoodSelection}
+                >
+                  Quitar visibles
+                </Button>
+                {hasFoodSelectionFilters && (
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
-                    disabled={selectedFoodIds.size === 0}
-                    onClick={handleClearFoodSelection}
+                    onClick={handleClearFoodSelectionFilters}
                   >
-                    <X aria-hidden="true" />
-                    Limpiar
+                    Limpiar filtros
                   </Button>
-                </div>
-              </div>
-
-              <label className="relative block">
-                <Search
-                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <Input
-                  value={foodSearch}
-                  onChange={(event) => setFoodSearch(event.target.value)}
-                  className="pl-9"
-                  placeholder="Buscar alimento para enviar"
-                  aria-label="Buscar alimento para enviar a la IA"
-                />
-              </label>
-
-              <div className="flex flex-wrap gap-2">
-                {filteredReasonableFoods.map((food) => {
-                  const isSelected = selectedFoodIds.has(food.id);
-
-                  return (
-                    <Button
-                      key={food.id}
-                      type="button"
-                      size="sm"
-                      variant={isSelected ? "default" : "outline"}
-                      onClick={() => handleToggleFood(food.id)}
-                    >
-                      {isSelected && <Check aria-hidden="true" />}
-                      {food.name}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                <Badge variant={selectedFoodIds.size > 0 ? "secondary" : "outline"}>
-                  {selectedFoodIds.size} de {reasonableFoods.length} seleccionados
-                </Badge>
-                {selectedReasonableFoods.slice(0, 8).map((food) => (
-                  <Badge key={food.id} variant="outline">
-                    {food.name}
-                  </Badge>
-                ))}
-                {selectedReasonableFoods.length > 8 && (
-                  <Badge variant="outline">
-                    +{selectedReasonableFoods.length - 8} mas
-                  </Badge>
                 )}
               </div>
+
+              <div className="rounded-md border bg-background">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 text-xs text-muted-foreground">
+                  <span>
+                    Mostrando {filteredReasonableFoods.length} alimentos
+                    {hasFoodSelectionFilters ? " filtrados" : ""}.
+                  </span>
+                  <span>{selectedFilteredFoodIdsCount} visibles seleccionados</span>
+                </div>
+
+                {filteredReasonableFoods.length > 0 ? (
+                  <div className="max-h-80 overflow-y-auto">
+                    {filteredReasonableFoods.map((food) => {
+                      const isSelected = selectedFoodIds.has(food.id);
+
+                      return (
+                        <label
+                          key={food.id}
+                          className="flex cursor-pointer gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleFood(food.id)}
+                            className="mt-1 size-4 shrink-0 accent-[var(--primary)]"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium">{food.name}</span>
+                              <Badge variant="outline">{food.category}</Badge>
+                              <Badge variant="secondary">
+                                Tolerancia {food.tolerance}/5
+                              </Badge>
+                            </span>
+                            {food.tags.length > 0 && (
+                              <span className="mt-1 block truncate text-xs text-muted-foreground">
+                                {food.tags.slice(0, 5).join(", ")}
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    No hay alimentos que coincidan con los filtros actuales.
+                  </div>
+                )}
+              </div>
+
+              {selectedReasonableFoods.length > 0 && (
+                <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                  {selectedReasonableFoods.slice(0, 8).map((food) => (
+                    <Badge key={food.id} variant="outline">
+                      {food.name}
+                    </Badge>
+                  ))}
+                  {selectedReasonableFoods.length > 8 && (
+                    <Badge variant="outline">
+                      +{selectedReasonableFoods.length - 8} mas
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2">
