@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Save, X } from "lucide-react";
+import { Loader2, Plus, Save, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { CreateFoodInput } from "@/features/foods/foods-api";
+import type {
+  AiFoodInfoSuggestion,
+  CreateFoodInput,
+  SuggestFoodInfoInput,
+} from "@/features/foods/foods-api";
 import type { Food, FoodStatus } from "@/lib/types/food";
 
 type FoodFormState = {
@@ -24,11 +28,14 @@ type FoodFormDialogProps = {
   initialFood?: Food;
   isDisabled?: boolean;
   isOpen: boolean;
+  isSuggestingWithAi?: boolean;
   isSubmitting?: boolean;
   mode?: "create" | "edit";
+  onSuggestWithAi?: (input: SuggestFoodInfoInput) => Promise<AiFoodInfoSuggestion>;
   onCancel?: () => void;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (input: CreateFoodInput) => Promise<void> | void;
+  suggestionDisabledReason?: string;
 };
 
 const emptyFormState: FoodFormState = {
@@ -72,25 +79,56 @@ function toFoodInput(formState: FoodFormState): CreateFoodInput {
   };
 }
 
+function getTagsFromInput(value: string) {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "No se ha podido generar la sugerencia.";
+}
+
 export function FoodFormDialog({
   disabledReason,
   errorMessage,
   initialFood,
   isDisabled = false,
   isOpen,
+  isSuggestingWithAi = false,
   isSubmitting = false,
   mode = "create",
+  onSuggestWithAi,
   onCancel,
   onOpenChange,
   onSubmit,
+  suggestionDisabledReason,
 }: FoodFormDialogProps) {
   const [formState, setFormState] = useState(() => toFormState(initialFood));
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
+  const [suggestionFeedback, setSuggestionFeedback] = useState<string | null>(null);
   const disabled = isDisabled || isSubmitting;
   const isEditing = mode === "edit";
+  const canSuggestWithAi = !isEditing && Boolean(onSuggestWithAi);
+  const suggestionButtonDisabled =
+    disabled ||
+    !canSuggestWithAi ||
+    isSuggestingWithAi ||
+    formState.name.trim().length < 2;
+  const suggestionButtonTitle = !canSuggestWithAi
+    ? (suggestionDisabledReason ?? "La sugerencia con IA no esta disponible.")
+    : formState.name.trim().length < 2
+      ? "Escribe primero el nombre del alimento."
+      : "Rellenar campos con una propuesta de IA.";
 
   useEffect(() => {
     if (isOpen) {
       setFormState(toFormState(initialFood));
+      setSuggestionError(null);
+      setSuggestionFeedback(null);
     }
   }, [initialFood, isOpen]);
 
@@ -112,6 +150,37 @@ export function FoodFormDialog({
     onOpenChange(open);
   }
 
+  async function handleSuggestWithAi() {
+    if (!onSuggestWithAi || suggestionButtonDisabled) {
+      return;
+    }
+
+    setSuggestionError(null);
+    setSuggestionFeedback(null);
+
+    try {
+      const suggestion = await onSuggestWithAi({
+        category: formState.category.trim() || undefined,
+        name: formState.name.trim(),
+        notes: formState.notes.trim() || undefined,
+        tags: getTagsFromInput(formState.tags),
+      });
+
+      setFormState((current) => ({
+        ...current,
+        category: suggestion.category,
+        notes: suggestion.notes ?? current.notes,
+        status: suggestion.status,
+        suggestedServing: suggestion.suggestedServing,
+        tags: suggestion.tags.join(", "),
+        tolerance: String(suggestion.tolerance) as FoodFormState["tolerance"],
+      }));
+      setSuggestionFeedback("Sugerencia aplicada. Revisa los campos antes de guardar.");
+    } catch (error) {
+      setSuggestionError(getErrorMessage(error));
+    }
+  }
+
   return (
     <Dialog
       open={isOpen}
@@ -131,9 +200,29 @@ export function FoodFormDialog({
           </div>
         )}
 
-        <label className="space-y-2 text-sm font-medium">
-          Nombre
+        <div className="space-y-2 text-sm font-medium">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label htmlFor="food-name">Nombre</label>
+            {!isEditing && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={suggestionButtonDisabled}
+                title={suggestionButtonTitle}
+                onClick={handleSuggestWithAi}
+              >
+                {isSuggestingWithAi ? (
+                  <Loader2 className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Sparkles aria-hidden="true" />
+                )}
+                {isSuggestingWithAi ? "Sugiriendo..." : "Sugerir con IA"}
+              </Button>
+            )}
+          </div>
           <Input
+            id="food-name"
             value={formState.name}
             onChange={(event) =>
               setFormState((current) => ({ ...current, name: event.target.value }))
@@ -142,7 +231,17 @@ export function FoodFormDialog({
             disabled={disabled}
             required
           />
-        </label>
+          {suggestionError && (
+            <p className="text-xs font-normal leading-5 text-destructive">
+              {suggestionError}
+            </p>
+          )}
+          {suggestionFeedback && (
+            <p className="text-xs font-normal leading-5 text-muted-foreground">
+              {suggestionFeedback}
+            </p>
+          )}
+        </div>
 
         <label className="space-y-2 text-sm font-medium">
           Categoria

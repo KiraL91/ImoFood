@@ -1,5 +1,13 @@
+import { z } from "zod";
+
 import { apiClient } from "@/lib/api/client";
-import { foodSchema, type Food, type FoodStatus } from "@/lib/types/food";
+import {
+  foodSchema,
+  foodStatusSchema,
+  toleranceSchema,
+  type Food,
+  type FoodStatus,
+} from "@/lib/types/food";
 
 export type FoodFilters = {
   search?: string;
@@ -19,6 +27,30 @@ export type CreateFoodInput = {
 };
 
 export type UpdateFoodInput = Partial<CreateFoodInput>;
+
+export type SuggestFoodInfoInput = {
+  category?: string;
+  name: string;
+  notes?: string;
+  tags?: string[];
+};
+
+const aiFoodInfoSuggestionSchema = z.object({
+  category: z.string(),
+  notes: z.string().optional(),
+  status: foodStatusSchema,
+  suggestedServing: z.string(),
+  tags: z.array(z.string()),
+  tolerance: toleranceSchema,
+});
+
+const aiFoodInfoSuggestionResultSchema = z.object({
+  model: z.string(),
+  provider: z.string(),
+  suggestion: aiFoodInfoSuggestionSchema,
+});
+
+export type AiFoodInfoSuggestion = z.infer<typeof aiFoodInfoSuggestionSchema>;
 
 function buildFoodSearchParams(filters: FoodFilters = {}) {
   const searchParams = new URLSearchParams();
@@ -68,4 +100,15 @@ export async function deleteFood(id: string): Promise<void> {
   await apiClient<void>(`/foods/${id}`, {
     method: "DELETE",
   });
+}
+
+export async function suggestFoodInfo(
+  input: SuggestFoodInfoInput,
+): Promise<AiFoodInfoSuggestion> {
+  const data = await apiClient<unknown>("/ai/suggestions/food-info", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
+  return aiFoodInfoSuggestionResultSchema.parse(data).suggestion;
 }

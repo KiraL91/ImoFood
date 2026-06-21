@@ -1,7 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFood, deleteFood, getFoods, updateFood } from "@/features/foods/foods-api";
+import {
+  createFood,
+  deleteFood,
+  getFoods,
+  suggestFoodInfo,
+  updateFood,
+} from "@/features/foods/foods-api";
 import { env } from "@/lib/env";
 import { foods as mockFoods } from "@/lib/mock/foods";
 import { useAuth } from "@/providers/auth-provider";
@@ -56,5 +62,11 @@ export function useDeleteFood() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: foodQueryKeys.all });
     },
+  });
+}
+
+export function useSuggestFoodInfo() {
+  return useMutation({
+    mutationFn: suggestFoodInfo,
   });
 }

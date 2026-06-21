@@ -24,7 +24,9 @@ export type Permission =
   | "treatment-logs:read"
   | "treatment-logs:create"
   | "treatment-logs:update"
-  | "treatment-logs:delete";
+  | "treatment-logs:delete"
+  | "ai-suggestions:read"
+  | "ai-suggestions:create";
 
 export type AuthUser = {
   displayName?: string;

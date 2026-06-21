@@ -5,18 +5,29 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from "@nestjs/common";
-import { FoodStatus } from "@prisma/client";
+import { FoodStatus as PrismaFoodStatus } from "@prisma/client";
 
 import { AI_MODEL_PROVIDER } from "./ai.tokens";
+import type { CreateFoodInfoSuggestionDto } from "./dto/create-food-info-suggestion.dto";
 import type { CreateMealIdeasSuggestionDto } from "./dto/create-meal-ideas-suggestion.dto";
+import { foodInfoResponseSchema } from "./schemas/food-info-response.schema";
 import { mealIdeasResponseSchema } from "./schemas/meal-ideas-response.schema";
 import type { AiModelProvider, AiModelPrompt } from "./types/ai-model";
+import type {
+  AiFoodInfoSuggestion,
+  AiFoodInfoSuggestionResult,
+} from "./types/food-info-suggestion";
 import type {
   AiConfiguration,
   AiMealIdeaSuggestion,
   AiMealIdeasContextSummary,
   AiMealIdeasSuggestionResult,
 } from "./types/meal-idea-suggestion";
+import {
+  FOOD_STATUSES,
+  type FoodStatus,
+  type ToleranceScore,
+} from "../foods/types/food";
 import { PrismaService } from "../prisma/prisma.service";
 
 type MealIdeasContext = {
@@ -46,6 +57,18 @@ type MealIdeasContext = {
   }>;
 };
 
+type FoodInfoContext = {
+  categories: string[];
+  existingFoods: Array<{
+    category: string;
+    name: string;
+    status: string;
+    tags: string[];
+    tolerance: number;
+  }>;
+  tags: string[];
+};
+
 @Injectable()
 export class AiSuggestionsService {
   constructor(
@@ -58,7 +81,7 @@ export class AiSuggestionsService {
     const enabled = this.modelProvider.isEnabled();
 
     return {
-      capabilities: ["meal-ideas"],
+      capabilities: ["meal-ideas", "food-info"],
       enabled,
       model: this.modelProvider.modelName,
       provider: this.modelProvider.providerName,
@@ -99,6 +122,34 @@ export class AiSuggestionsService {
     };
   }
 
+  async generateFoodInfo(
+    createFoodInfoSuggestionDto: CreateFoodInfoSuggestionDto,
+  ): Promise<AiFoodInfoSuggestionResult> {
+    if (createFoodInfoSuggestionDto.name.trim().length < 2) {
+      throw new BadRequestException("Food name is required.");
+    }
+
+    if (!this.modelProvider.isEnabled()) {
+      throw new ServiceUnavailableException(
+        "AI food suggestions are not configured yet.",
+      );
+    }
+
+    const context = await this.getFoodInfoContext();
+    const prompt = this.buildFoodInfoPrompt(
+      createFoodInfoSuggestionDto,
+      context,
+    );
+    const completion = await this.modelProvider.complete(prompt);
+    const suggestion = this.parseFoodInfoSuggestion(completion.content);
+
+    return {
+      model: completion.model,
+      provider: completion.provider,
+      suggestion,
+    };
+  }
+
   private async getMealIdeasContext(
     foodIds?: string[],
   ): Promise<MealIdeasContext> {
@@ -126,7 +177,7 @@ export class AiSuggestionsService {
           },
           where: {
             ...selectedFoodWhere,
-            status: FoodStatus.allowed,
+            status: PrismaFoodStatus.allowed,
             tolerance: {
               gte: 4,
             },
@@ -147,7 +198,7 @@ export class AiSuggestionsService {
           where: {
             ...selectedFoodWhere,
             status: {
-              in: [FoodStatus.allowed, FoodStatus.testing],
+              in: [PrismaFoodStatus.allowed, PrismaFoodStatus.testing],
             },
             tolerance: {
               gte: 3,
@@ -165,7 +216,7 @@ export class AiSuggestionsService {
             OR: [
               {
                 status: {
-                  in: [FoodStatus.avoid, FoodStatus.caution],
+                  in: [PrismaFoodStatus.avoid, PrismaFoodStatus.caution],
                 },
               },
               {
@@ -205,6 +256,45 @@ export class AiSuggestionsService {
       highRatedRecipes,
       reasonableFoods,
       safeFoods,
+    };
+  }
+
+  private async getFoodInfoContext(): Promise<FoodInfoContext> {
+    const foods = await this.prisma.food.findMany({
+      orderBy: {
+        name: "asc",
+      },
+      select: {
+        category: true,
+        name: true,
+        status: true,
+        tags: true,
+        tolerance: true,
+      },
+      take: 120,
+    });
+    const categories = Array.from(
+      new Set(
+        foods
+          .map((food) => food.category.trim())
+          .filter((category) => category.length > 0),
+      ),
+    ).sort((leftCategory, rightCategory) =>
+      leftCategory.localeCompare(rightCategory, "es"),
+    );
+    const tags = Array.from(
+      new Set(
+        foods
+          .flatMap((food) => food.tags)
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0),
+      ),
+    ).sort((leftTag, rightTag) => leftTag.localeCompare(rightTag, "es"));
+
+    return {
+      categories,
+      existingFoods: foods,
+      tags,
     };
   }
 
@@ -288,6 +378,67 @@ export class AiSuggestionsService {
     };
   }
 
+  private buildFoodInfoPrompt(
+    createFoodInfoSuggestionDto: CreateFoodInfoSuggestionDto,
+    context: FoodInfoContext,
+  ): AiModelPrompt {
+    const name = createFoodInfoSuggestionDto.name.trim();
+
+    return {
+      metadata: {
+        capability: "food-info",
+        foodName: name,
+      },
+      responseFormat: {
+        mimeType: "application/json",
+        schema: foodInfoResponseSchema,
+      },
+      system: [
+        "Eres un asistente para una app de seguimiento alimentario relacionada con IMO, SIBO e IBD.",
+        "Tu tarea es proponer metadatos iniciales para un alimento que el usuario quiere guardar.",
+        "La propuesta debe ser prudente, editable y orientativa; no des consejo medico.",
+        "Si hay incertidumbre sobre tolerancia, usa testing o caution antes que allowed.",
+        "La racion sugerida debe incluir una cantidad aproximada y una equivalencia cotidiana breve.",
+        "Devuelve exclusivamente JSON valido con la clave suggestion.",
+      ].join("\n"),
+      user: JSON.stringify(
+        {
+          context: {
+            existingCategories: context.categories.slice(0, 40),
+            existingFoods: context.existingFoods.slice(0, 60),
+            existingTags: context.tags.slice(0, 60),
+          },
+          partialInput: {
+            category: createFoodInfoSuggestionDto.category?.trim() || undefined,
+            notes: createFoodInfoSuggestionDto.notes?.trim() || undefined,
+            tags: createFoodInfoSuggestionDto.tags ?? [],
+          },
+          responseFormat: {
+            suggestion: {
+              category: "string",
+              notes:
+                "breve explicacion sobre tolerancia tipica, variabilidad y cautelas",
+              status: "allowed | testing | caution | avoid",
+              suggestedServing:
+                "cantidad aproximada + equivalencia, por ejemplo: 50 g, equivale a medio aguacate mediano",
+              tags: ["string"],
+              tolerance: "integer from 1 to 5",
+            },
+          },
+          rules: {
+            allowedStatuses: FOOD_STATUSES,
+            maxTags: 6,
+            toleranceScale:
+              "1 muy mala, 2 baja, 3 media/en prueba, 4 buena, 5 muy buena",
+          },
+          targetFoodName: name,
+        },
+        null,
+        2,
+      ),
+    };
+  }
+
   private getPromptContext(
     context: MealIdeasContext,
     variationSeed?: string,
@@ -359,6 +510,43 @@ export class AiSuggestionsService {
     this.assertSuggestedFoodsAreAllowed(parsedSuggestions, context);
 
     return parsedSuggestions;
+  }
+
+  private parseFoodInfoSuggestion(content: string): AiFoodInfoSuggestion {
+    const parsedContent = this.parseJsonContent(content);
+
+    if (
+      !this.isRecord(parsedContent) ||
+      !this.isRecord(parsedContent.suggestion)
+    ) {
+      throw new BadGatewayException(
+        "AI response did not include a food suggestion.",
+      );
+    }
+
+    const suggestion = parsedContent.suggestion;
+    const category = this.readRequiredString(suggestion.category, "category");
+    const status = this.readFoodStatus(suggestion.status);
+    const tolerance = this.readToleranceScore(suggestion.tolerance);
+    const suggestedServing = this.readRequiredString(
+      suggestion.suggestedServing,
+      "suggestedServing",
+    );
+    const tags = this.readStringList(suggestion.tags, "tags").slice(0, 6);
+    const notes = this.readOptionalString(suggestion.notes);
+
+    if (tags.length === 0) {
+      throw new BadGatewayException("AI suggestion did not include tags.");
+    }
+
+    return {
+      category,
+      notes,
+      status,
+      suggestedServing,
+      tags,
+      tolerance,
+    };
   }
 
   private parseJsonContent(content: string): unknown {
@@ -446,6 +634,32 @@ export class AiSuggestionsService {
           .filter((item) => item.length > 0),
       ),
     );
+  }
+
+  private readFoodStatus(value: unknown): FoodStatus {
+    if (
+      typeof value !== "string" ||
+      !FOOD_STATUSES.includes(value as FoodStatus)
+    ) {
+      throw new BadGatewayException("AI food status was invalid.");
+    }
+
+    return value as FoodStatus;
+  }
+
+  private readToleranceScore(value: unknown): ToleranceScore {
+    const parsedValue = typeof value === "string" ? Number(value) : value;
+
+    if (
+      typeof parsedValue !== "number" ||
+      !Number.isInteger(parsedValue) ||
+      parsedValue < 1 ||
+      parsedValue > 5
+    ) {
+      throw new BadGatewayException("AI food tolerance was invalid.");
+    }
+
+    return parsedValue as ToleranceScore;
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

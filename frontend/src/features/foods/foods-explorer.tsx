@@ -13,8 +13,10 @@ import {
   useCreateFood,
   useDeleteFood,
   useFoods,
+  useSuggestFoodInfo,
   useUpdateFood,
 } from "@/features/foods/foods-queries";
+import { useAiSuggestionsConfig } from "@/features/meal-ideas/ai-meal-ideas-queries";
 import { foodStatusMeta, foodStatusOrder } from "@/lib/constants/status";
 import { env } from "@/lib/env";
 import type { Food, FoodStatus } from "@/lib/types/food";
@@ -43,10 +45,13 @@ export function FoodsExplorer() {
   const canUpdateFood = hasPermission("foods:update");
   const canDeleteFood = hasPermission("foods:delete");
   const canCreateMealLog = hasPermission("meal-logs:create");
+  const canCreateAiSuggestion = hasPermission("ai-suggestions:create");
   const foodsQuery = useFoods();
+  const aiConfigQuery = useAiSuggestionsConfig();
   const createFoodMutation = useCreateFood();
   const updateFoodMutation = useUpdateFood();
   const deleteFoodMutation = useDeleteFood();
+  const suggestFoodInfoMutation = useSuggestFoodInfo();
   const foods = useMemo(
     () => (hasBackendConfigured && !isAuthenticated ? [] : (foodsQuery.data ?? [])),
     [foodsQuery.data, hasBackendConfigured, isAuthenticated],
@@ -58,6 +63,12 @@ export function FoodsExplorer() {
     (editingFood ? !canUpdateFood : !canCreateFood);
   const canOpenCreateDialog = hasBackendConfigured && isAuthenticated && canCreateFood;
   const canRegisterMealLog = hasBackendConfigured && isAuthenticated && canCreateMealLog;
+  const canSuggestFoodWithAi =
+    hasBackendConfigured &&
+    isAuthenticated &&
+    canCreateAiSuggestion &&
+    aiConfigQuery.data?.status === "ready" &&
+    aiConfigQuery.data.capabilities.includes("food-info");
   const disabledReason = !hasBackendConfigured
     ? "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend."
     : !isAuthenticated
@@ -176,14 +187,29 @@ export function FoodsExplorer() {
         initialFood={editingFood}
         isDisabled={isFormDisabled}
         isOpen={isFoodDialogOpen}
+        isSuggestingWithAi={suggestFoodInfoMutation.isPending}
         isSubmitting={isSubmitting}
         mode={editingFood ? "edit" : "create"}
+        onSuggestWithAi={
+          canSuggestFoodWithAi ? suggestFoodInfoMutation.mutateAsync : undefined
+        }
         onCancel={() => {
           setEditingFood(undefined);
           setMutationError(null);
         }}
         onOpenChange={handleFoodDialogOpenChange}
         onSubmit={handleFoodSubmit}
+        suggestionDisabledReason={
+          !hasBackendConfigured
+            ? "Configura NEXT_PUBLIC_API_BASE_URL para usar IA."
+            : !isAuthenticated
+              ? "Inicia sesion para pedir sugerencias con IA."
+              : !canCreateAiSuggestion
+                ? "Tu rol no permite usar sugerencias con IA."
+                : aiConfigQuery.isLoading
+                  ? "Comprobando configuracion de IA..."
+                  : "La IA no esta activa o no soporta sugerencias de alimentos."
+        }
       />
 
       {!hasBackendConfigured && (
