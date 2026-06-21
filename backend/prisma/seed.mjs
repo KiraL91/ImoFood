@@ -1253,12 +1253,14 @@ for (const user of users) {
       username: user.username,
     },
     update: {
+      active: true,
       displayName: user.displayName,
       email: user.email,
       passwordHash: hashPassword(user.password),
       role: user.role,
     },
     create: {
+      active: true,
       displayName: user.displayName,
       email: user.email,
       passwordHash: hashPassword(user.password),

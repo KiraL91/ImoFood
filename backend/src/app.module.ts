@@ -8,6 +8,7 @@ import { MealLogsModule } from "./meal-logs/meal-logs.module";
 import { RecipesModule } from "./recipes/recipes.module";
 import { SymptomLogsModule } from "./symptom-logs/symptom-logs.module";
 import { TreatmentsModule } from "./treatments/treatments.module";
+import { UsersModule } from "./users/users.module";
 
 @Module({
   controllers: [AppController],
@@ -19,6 +20,7 @@ import { TreatmentsModule } from "./treatments/treatments.module";
     MealLogsModule,
     SymptomLogsModule,
     TreatmentsModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

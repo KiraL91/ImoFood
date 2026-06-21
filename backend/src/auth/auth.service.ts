@@ -45,7 +45,11 @@ export class AuthService {
       },
     });
 
-    if (!user || !this.verifyPassword(loginDto.password, user.passwordHash)) {
+    if (
+      !user ||
+      !user.active ||
+      !this.verifyPassword(loginDto.password, user.passwordHash)
+    ) {
       throw new UnauthorizedException("Invalid username or password.");
     }
 
@@ -59,7 +63,7 @@ export class AuthService {
       },
     });
 
-    if (!user) {
+    if (!user || !user.active) {
       throw new UnauthorizedException("Authenticated user was not found.");
     }
 
@@ -220,7 +224,7 @@ export class AuthService {
       .digest("base64url");
   }
 
-  private hashPassword(password: string): string {
+  hashPassword(password: string): string {
     const salt = randomBytes(16).toString("hex");
     const hash = scryptSync(password, salt, 64).toString("hex");
 

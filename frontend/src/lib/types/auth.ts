@@ -26,7 +26,11 @@ export type Permission =
   | "treatment-logs:update"
   | "treatment-logs:delete"
   | "ai-suggestions:read"
-  | "ai-suggestions:create";
+  | "ai-suggestions:create"
+  | "users:read"
+  | "users:create"
+  | "users:update"
+  | "users:disable";
 
 export type AuthUser = {
   displayName?: string;

@@ -29,6 +29,10 @@ export const permissions = [
   "treatment-logs:delete",
   "ai-suggestions:read",
   "ai-suggestions:create",
+  "users:read",
+  "users:create",
+  "users:update",
+  "users:disable",
 ] as const;
 
 export type Permission = (typeof permissions)[number];
@@ -61,6 +65,10 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     "treatment-logs:delete",
     "ai-suggestions:read",
     "ai-suggestions:create",
+    "users:read",
+    "users:create",
+    "users:update",
+    "users:disable",
   ],
   [UserRole.member]: [
     "foods:read",
