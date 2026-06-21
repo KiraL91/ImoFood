@@ -45,6 +45,15 @@ Core domains already present:
 - After implementing a user-requested code change, run relevant validation and create a git commit automatically.
 - Do not push unless the user asks.
 
+## Context Hygiene
+
+- Minimize internal context: read the nearest relevant `AGENTS.md` files first, then only the files directly involved in the task.
+- Prefer targeted `rg` searches and focused file reads over broad repository scans.
+- If the scope is unclear, separate exploration from implementation and ask for/offer a short plan before reading large areas.
+- Keep intermediate updates brief; summarize large command outputs instead of pasting them back.
+- Validate proportionally to the change. Run full frontend/backend validation for code changes in that area, but skip builds for tiny text-only documentation changes and say so.
+- Add more specific `AGENTS.md` files only for high-risk or cross-contract areas such as auth, Prisma/data ownership, AI, or complex feature flows.
+
 ## Validation
 
 Frontend:

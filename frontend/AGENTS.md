@@ -62,6 +62,13 @@ Important feature files:
 - Keep forms low-friction. Prefer optional fields and sensible defaults.
 - Do not save AI output automatically; AI suggestions populate editable drafts only.
 
+## Context Hygiene
+
+- For frontend changes, start with the route/page, feature component, API file, query hook, and local type file for the affected domain.
+- Avoid reading unrelated feature folders unless the change touches shared navigation, auth, layout, or cross-domain workflows.
+- Use targeted searches for specific permission strings, API paths, component names, or type names before broad scans.
+- Keep validation scoped: run frontend format/typecheck/lint/build for frontend code changes; skip the build for tiny text-only documentation edits and mention that no build was needed.
+
 ## Current UX Decisions
 
 - Mobile navigation is grouped by user mental model, including "Mi diario".

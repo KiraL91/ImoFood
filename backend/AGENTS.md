@@ -76,6 +76,15 @@ AI:
 - `POST /ai/suggestions/food-info`
 - Protected by auth and `ai-suggestions:*` permissions.
 
+## Context Hygiene
+
+- For backend feature changes, start with the affected controller, service, DTOs, type mapper, and tests/seed only when relevant.
+- Read `src/auth/auth.constants.ts` only when changing endpoint permissions, roles, or frontend permission contracts.
+- Read `prisma/schema.prisma` and migrations only when the data shape or ownership model changes.
+- Prefer targeted `rg` searches for endpoint paths, DTO names, Prisma models, and permission strings before broad scans.
+- Keep validation scoped: run backend format/lint/build for backend code changes; add `db:generate`, migrations, deploy, or seed only when schema, Prisma client, or seed data changes.
+- For tiny text-only documentation edits, backend build is not required; state that explicitly.
+
 ## Auth and Permissions
 
 - Permission list and role mapping: `src/auth/auth.constants.ts`.
