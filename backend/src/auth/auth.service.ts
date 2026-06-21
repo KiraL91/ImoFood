@@ -1,9 +1,20 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { AppUser, UserRole } from "@prisma/client";
-import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
+import {
+  createHmac,
+  randomBytes,
+  scryptSync,
+  timingSafeEqual,
+} from "node:crypto";
 
 import { getRolePermissions } from "./auth.constants";
+import type { ChangePasswordDto } from "./dto/change-password.dto";
 import type { LoginDto } from "./dto/login.dto";
+import type { UpdateMeDto } from "./dto/update-me.dto";
 import type { AuthenticatedUser } from "./types/authenticated-user";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -53,6 +64,84 @@ export class AuthService {
     }
 
     return this.toAuthenticatedUser(user);
+  }
+
+  async updateMe(
+    userId: string,
+    updateMeDto: UpdateMeDto,
+  ): Promise<AuthenticatedUser> {
+    const user = await this.prisma.appUser.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Authenticated user was not found.");
+    }
+
+    const data: {
+      displayName?: string | null;
+      email?: string | null;
+    } = {};
+
+    if (updateMeDto.displayName !== undefined) {
+      const displayName = updateMeDto.displayName.trim();
+      data.displayName = displayName || null;
+    }
+
+    if (updateMeDto.email !== undefined) {
+      const email = updateMeDto.email.trim().toLowerCase();
+      data.email = email || null;
+
+      if (data.email) {
+        const existingUser = await this.prisma.appUser.findUnique({
+          where: {
+            email: data.email,
+          },
+        });
+
+        if (existingUser && existingUser.id !== userId) {
+          throw new ConflictException("Email is already in use.");
+        }
+      }
+    }
+
+    const updatedUser = await this.prisma.appUser.update({
+      data,
+      where: {
+        id: userId,
+      },
+    });
+
+    return this.toAuthenticatedUser(updatedUser);
+  }
+
+  async changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<void> {
+    const user = await this.prisma.appUser.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (
+      !user ||
+      !this.verifyPassword(changePasswordDto.currentPassword, user.passwordHash)
+    ) {
+      throw new UnauthorizedException("Current password is incorrect.");
+    }
+
+    await this.prisma.appUser.update({
+      data: {
+        passwordHash: this.hashPassword(changePasswordDto.newPassword),
+      },
+      where: {
+        id: userId,
+      },
+    });
   }
 
   verifyAccessToken(token: string): AccessTokenPayload {
@@ -129,6 +218,13 @@ export class AuthService {
     return createHmac("sha256", this.getJwtSecret())
       .update(value)
       .digest("base64url");
+  }
+
+  private hashPassword(password: string): string {
+    const salt = randomBytes(16).toString("hex");
+    const hash = scryptSync(password, salt, 64).toString("hex");
+
+    return `scrypt:${salt}:${hash}`;
   }
 
   private verifyPassword(password: string, passwordHash: string): boolean {

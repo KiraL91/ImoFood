@@ -1,5 +1,6 @@
 import { Database, ShieldCheck, Smartphone, WifiOff } from "lucide-react";
 import { PreferenceCard } from "@/components/settings/preference-card";
+import { UserProfileSettings } from "@/features/settings/user-profile-settings";
 import {
   Card,
   CardContent,
@@ -62,6 +63,8 @@ export function SettingsPanel() {
           );
         })}
       </section>
+
+      <UserProfileSettings />
 
       <section>
         <h3 className="text-lg font-semibold">Preferencias MVP</h3>

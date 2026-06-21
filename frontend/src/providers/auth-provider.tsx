@@ -26,6 +26,7 @@ type AuthContextValue = {
   login: (input: LoginInput) => Promise<void>;
   logout: () => void;
   session: AuthSession | null;
+  updateUser: (user: AuthUser) => void;
   user: AuthUser | null;
 };
 
@@ -96,6 +97,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSession(null);
       },
       session,
+      updateUser: (user) => {
+        setSession((currentSession) => {
+          if (!currentSession) {
+            return currentSession;
+          }
+
+          const nextSession = {
+            ...currentSession,
+            user,
+          };
+
+          storeAuthSession(nextSession);
+
+          return nextSession;
+        });
+      },
       user: session?.user ?? null,
     }),
     [isLoading, session],
