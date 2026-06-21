@@ -1,4 +1,12 @@
-import { Clock, ListChecks, Pencil, Trash2, Utensils } from "lucide-react";
+import {
+  ChevronDown,
+  Clock,
+  ListChecks,
+  ListOrdered,
+  Pencil,
+  Trash2,
+  Utensils,
+} from "lucide-react";
 import { RecipeRating } from "@/components/recipes/recipe-rating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +45,10 @@ export function RecipeCard({
   onRatingChange,
   recipe,
 }: RecipeCardProps) {
+  const recipeSteps = recipe.steps ?? [];
+  const visibleSteps = recipeSteps.slice(0, 2);
+  const hiddenSteps = recipeSteps.slice(2);
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -110,6 +122,43 @@ export function RecipeCard({
             ))}
           </ul>
         </div>
+        {recipeSteps.length > 0 && (
+          <div className="rounded-md border bg-muted/30 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="inline-flex items-center gap-1.5 text-xs font-medium uppercase text-muted-foreground">
+                <ListOrdered className="size-4" aria-hidden="true" />
+                Pasos
+              </p>
+              <span className="text-xs text-muted-foreground">
+                {recipeSteps.length} pasos
+              </span>
+            </div>
+            <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm leading-6 text-muted-foreground">
+              {visibleSteps.map((step, index) => (
+                <li key={`${index}-${step}`}>{step}</li>
+              ))}
+            </ol>
+            {hiddenSteps.length > 0 && (
+              <details className="group mt-2">
+                <summary className="flex cursor-pointer list-none items-center gap-1 text-sm font-medium text-primary outline-none transition hover:text-primary/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                  Ver {hiddenSteps.length} pasos mas
+                  <ChevronDown
+                    className="size-4 transition group-open:rotate-180"
+                    aria-hidden="true"
+                  />
+                </summary>
+                <ol
+                  start={3}
+                  className="mt-2 list-decimal space-y-2 pl-5 text-sm leading-6 text-muted-foreground"
+                >
+                  {hiddenSteps.map((step, index) => (
+                    <li key={`${index + visibleSteps.length}-${step}`}>{step}</li>
+                  ))}
+                </ol>
+              </details>
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {recipe.tags.map((tag) => (
             <Badge key={tag} variant="secondary">
