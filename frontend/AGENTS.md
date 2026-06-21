@@ -36,6 +36,7 @@ Important feature files:
 - Meal logs: `src/features/meal-logs/*`, `src/components/meal-logs/*`.
 - Symptoms: `src/features/symptoms/*`, `src/components/symptoms/*`.
 - Treatments: `src/features/treatments/*`, `src/components/treatments/*`.
+- User admin: `src/features/users/*`, `src/features/settings/users-settings.tsx`, `src/lib/types/user.ts`.
 - Navigation: `src/lib/constants/navigation.ts`, `src/components/layout/*`.
 
 ## Routes
@@ -61,6 +62,7 @@ Important feature files:
   `bottom-[calc(9.5rem+env(safe-area-inset-bottom))]` on mobile, `sm:bottom-6` on larger screens.
 - Keep forms low-friction. Prefer optional fields and sensible defaults.
 - Do not save AI output automatically; AI suggestions populate editable drafts only.
+- User administration belongs in Settings, stays compact/mobile-first, and should be shown only with `hasPermission("users:read")`.
 
 ## Context Hygiene
 
@@ -101,6 +103,14 @@ Relevant permissions include:
 - `treatment-logs:*`
 - `ai-suggestions:read`
 - `ai-suggestions:create`
+- `users:*`
+
+## User Admin UI
+
+- User admin UI lives in Settings and is shown only with `hasPermission("users:read")`.
+- Use `features/users/*` for API/query hooks and keep contracts in `lib/types/user.ts`.
+- Keep user management compact and mobile-first.
+- Do not add other-user password changes unless explicitly requested.
 
 ## API Client
 

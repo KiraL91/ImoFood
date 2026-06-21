@@ -26,6 +26,7 @@ NestJS API for IMO Meals.
 - `src/meal-logs`: intake logs.
 - `src/symptom-logs`: symptom logs.
 - `src/treatments`: treatments and treatment logs.
+- `src/users`: owner-only user administration.
 - `src/ai`: provider abstraction and suggestion endpoints.
 - `prisma/schema.prisma`: database schema.
 - `prisma/migrations`: committed migrations.
@@ -76,6 +77,15 @@ AI:
 - `POST /ai/suggestions/food-info`
 - Protected by auth and `ai-suggestions:*` permissions.
 
+Users:
+
+- CRUD-style admin lives under `/users`.
+- User admin is owner-only through `users:*` permissions.
+- Never return `passwordHash` from any user endpoint.
+- Disabled users use `AppUser.active = false`; do not physically delete users.
+- Auth must reject inactive users on login and authenticated requests.
+- Always preserve at least one active owner when changing roles or disabling users.
+
 ## Context Hygiene
 
 - For backend feature changes, start with the affected controller, service, DTOs, type mapper, and tests/seed only when relevant.
@@ -98,6 +108,12 @@ Roles:
 - `owner`: full permissions.
 - `member`: read/create/update for most personal data and AI suggestions.
 - `readonly`: read-only.
+
+User management:
+
+- Only `owner` should receive `users:*` permissions.
+- Keep frontend `src/lib/types/auth.ts` aligned with backend permission changes.
+- Keep user DTOs explicit and avoid exposing password hashes through select/include shortcuts.
 
 ## Prisma and Database
 
