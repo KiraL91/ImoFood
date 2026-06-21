@@ -47,6 +47,7 @@ Core domains already present:
 
 ## Context Hygiene
 
+- Default to token economy mode when the user does not request otherwise.
 - Minimize internal context: read the nearest relevant `AGENTS.md` files first, then only the files directly involved in the task.
 - Prefer targeted `rg` searches and focused file reads over broad repository scans.
 - If the scope is unclear, separate exploration from implementation and ask for/offer a short plan before reading large areas.
@@ -54,6 +55,9 @@ Core domains already present:
 - Validate proportionally to the change. Run full frontend/backend validation for code changes in that area, but skip builds for tiny text-only documentation changes and say so.
 - Add more specific `AGENTS.md` files only for high-risk or cross-contract areas such as auth, Prisma/data ownership, AI, or complex feature flows.
 - When a task introduces durable project context, new repo rules, or repeatedly applied conventions, update the nearest relevant `AGENTS.md` automatically in the same change.
+- If a task appears large, first identify the smallest useful slice and the likely files to touch before doing broad exploration.
+- When the user names a layer, route, file, or feature, stay within that scope unless a contract break requires crossing boundaries.
+- Keep final summaries short by default: what changed, validation run, commit hash, and any real caveats.
 
 ## Validation
 
