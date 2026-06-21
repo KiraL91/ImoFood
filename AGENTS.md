@@ -53,6 +53,7 @@ Core domains already present:
 - Keep intermediate updates brief; summarize large command outputs instead of pasting them back.
 - Validate proportionally to the change. Run full frontend/backend validation for code changes in that area, but skip builds for tiny text-only documentation changes and say so.
 - Add more specific `AGENTS.md` files only for high-risk or cross-contract areas such as auth, Prisma/data ownership, AI, or complex feature flows.
+- When a task introduces durable project context, new repo rules, or repeatedly applied conventions, update the nearest relevant `AGENTS.md` automatically in the same change.
 
 ## Validation
 
