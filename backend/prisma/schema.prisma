@@ -149,6 +149,12 @@ model AppUser {
   role         UserRole @default(member)
   active       Boolean  @default(true)
   passwordHash String
+  lastDisabledAt DateTime?
+  lastDisabledByUserId String?
+  lastEnabledAt DateTime?
+  lastEnabledByUserId String?
+  passwordResetAt DateTime?
+  passwordResetByUserId String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

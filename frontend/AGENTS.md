@@ -112,6 +112,7 @@ Relevant permissions include:
 - Keep user management compact and mobile-first.
 - Show reactivation actions only for inactive users with `hasPermission("users:enable")`.
 - Show other-user password reset only with `hasPermission("users:reset-password")`.
+- Show user audit metadata as compact secondary text; it represents last-action metadata, not a full history.
 
 ## API Client
 

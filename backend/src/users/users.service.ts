@@ -19,6 +19,12 @@ const userSelect = {
   displayName: true,
   email: true,
   id: true,
+  lastDisabledAt: true,
+  lastDisabledByUserId: true,
+  lastEnabledAt: true,
+  lastEnabledByUserId: true,
+  passwordResetAt: true,
+  passwordResetByUserId: true,
   role: true,
   updatedAt: true,
   username: true,
@@ -100,7 +106,7 @@ export class UsersService {
     return this.toUser(updatedUser);
   }
 
-  async disable(id: string): Promise<User> {
+  async disable(id: string, actorUserId: string): Promise<User> {
     const existingUser = await this.findUserOrThrow(id);
 
     if (!existingUser.active) {
@@ -114,6 +120,8 @@ export class UsersService {
     const updatedUser = await this.prisma.appUser.update({
       data: {
         active: false,
+        lastDisabledAt: new Date(),
+        lastDisabledByUserId: actorUserId,
       },
       select: userSelect,
       where: {
@@ -124,7 +132,7 @@ export class UsersService {
     return this.toUser(updatedUser);
   }
 
-  async enable(id: string): Promise<User> {
+  async enable(id: string, actorUserId: string): Promise<User> {
     const existingUser = await this.findUserOrThrow(id);
 
     if (existingUser.active) {
@@ -134,6 +142,8 @@ export class UsersService {
     const updatedUser = await this.prisma.appUser.update({
       data: {
         active: true,
+        lastEnabledAt: new Date(),
+        lastEnabledByUserId: actorUserId,
       },
       select: userSelect,
       where: {
@@ -147,6 +157,7 @@ export class UsersService {
   async resetPassword(
     id: string,
     resetUserPasswordDto: ResetUserPasswordDto,
+    actorUserId: string,
   ): Promise<void> {
     await this.findUserOrThrow(id);
 
@@ -155,6 +166,8 @@ export class UsersService {
         passwordHash: this.authService.hashPassword(
           resetUserPasswordDto.newPassword,
         ),
+        passwordResetAt: new Date(),
+        passwordResetByUserId: actorUserId,
       },
       where: {
         id,
@@ -256,6 +269,12 @@ export class UsersService {
       displayName: user.displayName ?? undefined,
       email: user.email ?? undefined,
       id: user.id,
+      lastDisabledAt: user.lastDisabledAt?.toISOString(),
+      lastDisabledByUserId: user.lastDisabledByUserId ?? undefined,
+      lastEnabledAt: user.lastEnabledAt?.toISOString(),
+      lastEnabledByUserId: user.lastEnabledByUserId ?? undefined,
+      passwordResetAt: user.passwordResetAt?.toISOString(),
+      passwordResetByUserId: user.passwordResetByUserId ?? undefined,
       role: user.role,
       updatedAt: user.updatedAt.toISOString(),
       username: user.username,

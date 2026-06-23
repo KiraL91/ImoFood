@@ -17,6 +17,12 @@ type PublicUserRecord = {
   displayName: string | null;
   email: string | null;
   id: string;
+  lastDisabledAt: Date | null;
+  lastDisabledByUserId: string | null;
+  lastEnabledAt: Date | null;
+  lastEnabledByUserId: string | null;
+  passwordResetAt: Date | null;
+  passwordResetByUserId: string | null;
   role: UserRole;
   updatedAt: Date;
   username: string;
@@ -31,6 +37,12 @@ function createPublicUser(
     displayName: "Member",
     email: "member@imo-meals.local",
     id: "member-id",
+    lastDisabledAt: null,
+    lastDisabledByUserId: null,
+    lastEnabledAt: null,
+    lastEnabledByUserId: null,
+    passwordResetAt: null,
+    passwordResetByUserId: null,
     role: UserRole.member,
     updatedAt: new Date("2026-06-23T11:00:00.000Z"),
     username: "member",
@@ -176,7 +188,10 @@ test("disabling the last active owner is rejected", async () => {
   };
   const service = createUsersService(createAuthService({}), prisma);
 
-  await assert.rejects(() => service.disable("owner-id"), BadRequestException);
+  await assert.rejects(
+    () => service.disable("owner-id", "actor-owner-id"),
+    BadRequestException,
+  );
   assert.equal(updateCalls, 0);
 });
 
@@ -230,14 +245,40 @@ test("inactive users can be re-enabled without creating a new user", async () =>
     },
   };
   const service = createUsersService(createAuthService({}), prisma);
-  const enabledUser = await service.enable("member-id");
+  const enabledUser = await service.enable("member-id", "actor-owner-id");
   const updateData = asRecord(asRecord(updateArgs).data);
 
-  assert.deepEqual(updateData, {
-    active: true,
-  });
+  assert.equal(updateData.active, true);
+  assert.equal(updateData.lastEnabledByUserId, "actor-owner-id");
+  assert.equal(updateData.lastEnabledAt instanceof Date, true);
   assert.equal(enabledUser.active, true);
   assert.equal(enabledUser.id, "member-id");
+});
+
+test("disabling a user records the actor and timestamp", async () => {
+  let updateArgs: unknown;
+  const user = createPublicUser({ id: "member-id" });
+  const prisma = {
+    appUser: {
+      findUnique: async () => user,
+      update: async (args: unknown) => {
+        updateArgs = args;
+
+        return {
+          ...user,
+          active: false,
+        };
+      },
+    },
+  };
+  const service = createUsersService(createAuthService({}), prisma);
+  const disabledUser = await service.disable("member-id", "actor-owner-id");
+  const updateData = asRecord(asRecord(updateArgs).data);
+
+  assert.equal(updateData.active, false);
+  assert.equal(updateData.lastDisabledByUserId, "actor-owner-id");
+  assert.equal(updateData.lastDisabledAt instanceof Date, true);
+  assert.equal(disabledUser.active, false);
 });
 
 test("owner password reset hashes the new password without the current password", async () => {
@@ -255,9 +296,13 @@ test("owner password reset hashes the new password without the current password"
   const authService = createAuthService({});
   const service = createUsersService(authService, prisma);
 
-  await service.resetPassword("member-id", {
-    newPassword: "new-password",
-  });
+  await service.resetPassword(
+    "member-id",
+    {
+      newPassword: "new-password",
+    },
+    "actor-owner-id",
+  );
 
   const updateData = asRecord(asRecord(updateArgs).data);
   const passwordHash = updateData.passwordHash;
@@ -265,4 +310,6 @@ test("owner password reset hashes the new password without the current password"
   assert.equal(typeof passwordHash, "string");
   assert.equal((passwordHash as string).startsWith("scrypt:"), true);
   assert.equal("currentPassword" in updateData, false);
+  assert.equal(updateData.passwordResetByUserId, "actor-owner-id");
+  assert.equal(updateData.passwordResetAt instanceof Date, true);
 });

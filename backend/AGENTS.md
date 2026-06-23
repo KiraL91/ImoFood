@@ -85,6 +85,7 @@ Users:
 - Disabled users use `AppUser.active = false`; do not physically delete users.
 - Reactivation uses `PATCH /users/:id/enable` and keeps the same user record.
 - Owner password reset uses `PATCH /users/:id/password` and must not require the user's current password.
+- User audit is minimal last-action metadata on `AppUser`: `lastDisabled*`, `lastEnabled*`, and `passwordReset*`; it is not a full append-only audit log.
 - Auth must reject inactive users on login and authenticated requests.
 - Always preserve at least one active owner when changing roles or disabling users.
 

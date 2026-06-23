@@ -31,6 +31,7 @@ import {
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { ManagedUser, ManagedUserRole } from "@/lib/types/user";
+import { formatDateTime } from "@/lib/utils/format-date";
 import { useAuth } from "@/providers/auth-provider";
 
 type FormStatus = {
@@ -99,6 +100,10 @@ export function UsersSettings() {
   const [editStatus, setEditStatus] = useState<FormStatus | null>(null);
   const [resetPasswordStatus, setResetPasswordStatus] = useState<FormStatus | null>(null);
   const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
+  const userById = useMemo(
+    () => new Map(users.map((managedUser) => [managedUser.id, managedUser])),
+    [users],
+  );
 
   const activeOwnerCount = useMemo(
     () =>
@@ -134,6 +139,47 @@ export function UsersSettings() {
     setResetPasswordConfirm("");
     setResetPasswordStatus(null);
     setResetPasswordOpen(true);
+  }
+
+  function getActorLabel(userId?: string) {
+    if (!userId) {
+      return undefined;
+    }
+
+    return userById.get(userId)?.username ?? "usuario desconocido";
+  }
+
+  function getAuditLines(managedUser: ManagedUser) {
+    const lines: string[] = [];
+
+    if (!managedUser.active && managedUser.lastDisabledAt) {
+      const actorLabel = getActorLabel(managedUser.lastDisabledByUserId);
+      lines.push(
+        `Desactivado ${formatDateTime(managedUser.lastDisabledAt)}${
+          actorLabel ? ` por ${actorLabel}` : ""
+        }`,
+      );
+    }
+
+    if (managedUser.active && managedUser.lastEnabledAt) {
+      const actorLabel = getActorLabel(managedUser.lastEnabledByUserId);
+      lines.push(
+        `Reactivado ${formatDateTime(managedUser.lastEnabledAt)}${
+          actorLabel ? ` por ${actorLabel}` : ""
+        }`,
+      );
+    }
+
+    if (managedUser.passwordResetAt) {
+      const actorLabel = getActorLabel(managedUser.passwordResetByUserId);
+      lines.push(
+        `Clave reset ${formatDateTime(managedUser.passwordResetAt)}${
+          actorLabel ? ` por ${actorLabel}` : ""
+        }`,
+      );
+    }
+
+    return lines;
   }
 
   async function refreshCurrentUserIfNeeded(managedUserId: string) {
@@ -350,6 +396,14 @@ export function UsersSettings() {
                     <Badge variant={managedUser.active ? "default" : "outline"}>
                       {managedUser.active ? "Activo" : "Inactivo"}
                     </Badge>
+                    {getAuditLines(managedUser).map((auditLine) => (
+                      <div
+                        key={auditLine}
+                        className="mt-1 text-xs leading-5 text-muted-foreground"
+                      >
+                        {auditLine}
+                      </div>
+                    ))}
                   </div>
 
                   <div className="flex justify-end gap-2">
