@@ -47,3 +47,10 @@ export type AuthSession = {
   accessToken: string;
   user: AuthUser;
 };
+
+export type RoleCatalogItem = {
+  description: string;
+  label: string;
+  permissions: Permission[];
+  role: UserRole;
+};

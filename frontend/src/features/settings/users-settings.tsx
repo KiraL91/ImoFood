@@ -15,6 +15,7 @@ import {
   useCreateUser,
   useDisableUser,
   useEnableUser,
+  useRoleCatalog,
   useResetUserPassword,
   useUpdateUser,
   useUsers,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import type { Permission } from "@/lib/types/auth";
 import type { ManagedUser, ManagedUserRole } from "@/lib/types/user";
 import { formatDateTime } from "@/lib/utils/format-date";
 import { useAuth } from "@/providers/auth-provider";
@@ -62,6 +64,11 @@ type UserActionConfirmation = {
   user: ManagedUser;
 };
 
+type PermissionGroup = {
+  label: string;
+  permissions: Permission[];
+};
+
 const emptyCreateForm: CreateUserForm = {
   displayName: "",
   email: "",
@@ -77,6 +84,63 @@ const roleLabels: Record<ManagedUserRole, string> = {
 };
 
 const roleOptions: ManagedUserRole[] = ["owner", "member", "readonly"];
+
+const rolePermissionGroups: PermissionGroup[] = [
+  {
+    label: "Alimentos",
+    permissions: ["foods:read", "foods:create", "foods:update", "foods:delete"],
+  },
+  {
+    label: "Recetas",
+    permissions: ["recipes:read", "recipes:create", "recipes:update", "recipes:delete"],
+  },
+  {
+    label: "Diario",
+    permissions: [
+      "meal-logs:read",
+      "meal-logs:create",
+      "meal-logs:update",
+      "meal-logs:delete",
+    ],
+  },
+  {
+    label: "Sintomas",
+    permissions: [
+      "symptom-logs:read",
+      "symptom-logs:create",
+      "symptom-logs:update",
+      "symptom-logs:delete",
+    ],
+  },
+  {
+    label: "Tratamientos",
+    permissions: [
+      "treatments:read",
+      "treatments:create",
+      "treatments:update",
+      "treatments:delete",
+      "treatment-logs:read",
+      "treatment-logs:create",
+      "treatment-logs:update",
+      "treatment-logs:delete",
+    ],
+  },
+  {
+    label: "IA",
+    permissions: ["ai-suggestions:read", "ai-suggestions:create"],
+  },
+  {
+    label: "Usuarios",
+    permissions: [
+      "users:read",
+      "users:create",
+      "users:update",
+      "users:disable",
+      "users:enable",
+      "users:reset-password",
+    ],
+  },
+];
 
 const userActionCopy: Record<
   UserAction,
@@ -118,6 +182,7 @@ export function UsersSettings() {
   const disableUserMutation = useDisableUser();
   const enableUserMutation = useEnableUser();
   const resetUserPasswordMutation = useResetUserPassword();
+  const roleCatalogQuery = useRoleCatalog();
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
@@ -139,6 +204,14 @@ export function UsersSettings() {
   const [editStatus, setEditStatus] = useState<FormStatus | null>(null);
   const [resetPasswordStatus, setResetPasswordStatus] = useState<FormStatus | null>(null);
   const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
+  const roleCatalog = useMemo(() => roleCatalogQuery.data ?? [], [roleCatalogQuery.data]);
+  const roleCatalogByRole = useMemo(
+    () =>
+      new Map(
+        roleCatalog.map((roleCatalogItem) => [roleCatalogItem.role, roleCatalogItem]),
+      ),
+    [roleCatalog],
+  );
   const userById = useMemo(
     () => new Map(users.map((managedUser) => [managedUser.id, managedUser])),
     [users],
@@ -250,6 +323,47 @@ export function UsersSettings() {
     }
 
     return lines;
+  }
+
+  function getRoleLabel(role: ManagedUserRole) {
+    return roleCatalogByRole.get(role)?.label ?? roleLabels[role];
+  }
+
+  function summarizePermissions(
+    permissions: Permission[],
+    permissionGroup: PermissionGroup,
+  ) {
+    const permissionSet = new Set(permissions);
+    const grantedCount = permissionGroup.permissions.filter((permission) =>
+      permissionSet.has(permission),
+    ).length;
+
+    if (grantedCount === 0) {
+      return "Sin acceso";
+    }
+
+    if (grantedCount === permissionGroup.permissions.length) {
+      return "Completo";
+    }
+
+    if (
+      grantedCount === 1 &&
+      permissionSet.has(permissionGroup.permissions[0] as Permission)
+    ) {
+      return "Lectura";
+    }
+
+    return "Edicion";
+  }
+
+  function getPermissionSummaryVariant(
+    summary: string,
+  ): "default" | "outline" | "secondary" {
+    if (summary === "Sin acceso") {
+      return "outline";
+    }
+
+    return summary === "Completo" ? "default" : "secondary";
   }
 
   async function refreshCurrentUserIfNeeded(managedUserId: string) {
@@ -513,7 +627,7 @@ export function UsersSettings() {
                   </div>
 
                   <div>
-                    <Badge variant="secondary">{roleLabels[managedUser.role]}</Badge>
+                    <Badge variant="secondary">{getRoleLabel(managedUser.role)}</Badge>
                   </div>
 
                   <div>
@@ -592,6 +706,96 @@ export function UsersSettings() {
               {users.length === 0 && (
                 <div className="px-4 py-6 text-sm text-muted-foreground">
                   No hay usuarios registrados.
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+            <ShieldCheck className="size-5" aria-hidden="true" />
+          </div>
+          <CardTitle>Roles</CardTitle>
+          <CardDescription>
+            {roleCatalog.length > 0
+              ? `${roleCatalog.length} roles del sistema`
+              : "Roles del sistema"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {roleCatalogQuery.isLoading && (
+            <div className="rounded-md border bg-secondary p-3 text-sm">
+              Cargando roles...
+            </div>
+          )}
+
+          {roleCatalogQuery.isError && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              No se han podido cargar los roles.
+            </div>
+          )}
+
+          {!roleCatalogQuery.isLoading && !roleCatalogQuery.isError && (
+            <div className="overflow-x-auto rounded-md border">
+              <table className="min-w-[720px] table-fixed text-left text-sm">
+                <thead className="bg-secondary text-xs text-muted-foreground">
+                  <tr>
+                    <th className="w-36 px-4 py-3 font-medium uppercase" scope="col">
+                      Area
+                    </th>
+                    {roleCatalog.map((roleCatalogItem) => (
+                      <th
+                        key={roleCatalogItem.role}
+                        className="px-4 py-3 align-top"
+                        scope="col"
+                      >
+                        <div className="text-sm font-semibold text-foreground">
+                          {roleCatalogItem.label}
+                        </div>
+                        <div className="mt-1 normal-case leading-5">
+                          {roleCatalogItem.description}
+                        </div>
+                        <div className="mt-1 font-normal normal-case">
+                          {roleCatalogItem.permissions.length} permisos
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rolePermissionGroups.map((permissionGroup) => (
+                    <tr key={permissionGroup.label} className="border-t">
+                      <th
+                        className="px-4 py-3 text-sm font-medium text-foreground"
+                        scope="row"
+                      >
+                        {permissionGroup.label}
+                      </th>
+                      {roleCatalog.map((roleCatalogItem) => {
+                        const summary = summarizePermissions(
+                          roleCatalogItem.permissions,
+                          permissionGroup,
+                        );
+
+                        return (
+                          <td key={roleCatalogItem.role} className="px-4 py-3">
+                            <Badge variant={getPermissionSummaryVariant(summary)}>
+                              {summary}
+                            </Badge>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {roleCatalog.length === 0 && (
+                <div className="px-4 py-6 text-sm text-muted-foreground">
+                  No hay roles disponibles.
                 </div>
               )}
             </div>
@@ -695,7 +899,7 @@ export function UsersSettings() {
               >
                 {roleOptions.map((role) => (
                   <option key={role} value={role}>
-                    {roleLabels[role]}
+                    {getRoleLabel(role)}
                   </option>
                 ))}
               </select>
@@ -884,7 +1088,7 @@ export function UsersSettings() {
                       role !== "owner"
                     }
                   >
-                    {roleLabels[role]}
+                    {getRoleLabel(role)}
                   </option>
                 ))}
               </select>
@@ -904,7 +1108,7 @@ export function UsersSettings() {
               />
               <span className="block text-xs leading-5 text-muted-foreground">
                 Escribe {editingUser.username} para cambiar su rol a{" "}
-                {roleLabels[editForm.role]}.
+                {getRoleLabel(editForm.role)}.
               </span>
             </label>
           )}

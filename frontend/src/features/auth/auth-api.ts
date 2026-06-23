@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api/client";
-import type { AuthSession, AuthUser } from "@/lib/types/auth";
+import type { AuthSession, AuthUser, RoleCatalogItem } from "@/lib/types/auth";
 
 export type LoginInput = {
   password: string;
@@ -31,6 +31,10 @@ export function refreshSession(): Promise<AuthSession> {
 
 export function getCurrentUser(): Promise<AuthUser> {
   return apiClient<AuthUser>("/auth/me");
+}
+
+export function getRoleCatalog(): Promise<RoleCatalogItem[]> {
+  return apiClient<RoleCatalogItem[]>("/auth/roles");
 }
 
 export function updateCurrentUser(input: UpdateCurrentUserInput): Promise<AuthUser> {

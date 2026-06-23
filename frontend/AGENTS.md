@@ -116,6 +116,7 @@ Relevant permissions include:
 - Show user audit metadata as compact secondary text; it represents last-action metadata, not a full history.
 - User creation should guide the same username policy as backend: 3-50 lowercase letters, numbers, hyphen, or underscore.
 - Sensitive user admin actions such as disable, enable, role changes, and password resets should require an explicit username confirmation in the UI.
+- Show the fixed backend role catalog from `GET /auth/roles` as read-only context; do not add dynamic/custom roles without an explicit request and migration plan.
 
 ## API Client
 

@@ -11,7 +11,11 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 
-import { getRolePermissions } from "./auth.constants";
+import {
+  getRoleCatalog,
+  getRolePermissions,
+  type RoleCatalogItem,
+} from "./auth.constants";
 import type { ChangePasswordDto } from "./dto/change-password.dto";
 import type { LoginDto } from "./dto/login.dto";
 import type { UpdateMeDto } from "./dto/update-me.dto";
@@ -72,6 +76,10 @@ export class AuthService {
 
   refreshSession(user: AuthenticatedUser): LoginResult {
     return this.createSessionResult(user);
+  }
+
+  getRoleCatalog(): RoleCatalogItem[] {
+    return getRoleCatalog();
   }
 
   async updateMe(

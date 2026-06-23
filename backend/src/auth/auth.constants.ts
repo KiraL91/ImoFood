@@ -39,6 +39,13 @@ export const permissions = [
 
 export type Permission = (typeof permissions)[number];
 
+export type RoleCatalogItem = {
+  description: string;
+  label: string;
+  permissions: Permission[];
+  role: UserRole;
+};
+
 export const rolePermissions: Record<UserRole, Permission[]> = {
   [UserRole.owner]: [
     "foods:read",
@@ -107,6 +114,43 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
   ],
 };
 
+const roleCatalogOrder: UserRole[] = [
+  UserRole.owner,
+  UserRole.member,
+  UserRole.readonly,
+];
+
+const roleMetadata: Record<
+  UserRole,
+  {
+    description: string;
+    label: string;
+  }
+> = {
+  [UserRole.owner]: {
+    description:
+      "Acceso completo a datos, usuarios y acciones administrativas.",
+    label: "Owner",
+  },
+  [UserRole.member]: {
+    description:
+      "Puede crear y editar datos personales sin administrar usuarios.",
+    label: "Member",
+  },
+  [UserRole.readonly]: {
+    description: "Puede consultar datos y sugerencias sin crear ni modificar.",
+    label: "Readonly",
+  },
+};
+
 export function getRolePermissions(role: UserRole): Permission[] {
   return rolePermissions[role];
+}
+
+export function getRoleCatalog(): RoleCatalogItem[] {
+  return roleCatalogOrder.map((role) => ({
+    ...roleMetadata[role],
+    permissions: [...rolePermissions[role]],
+    role,
+  }));
 }

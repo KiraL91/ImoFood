@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getRoleCatalog } from "@/features/auth/auth-api";
 import {
   createUser,
   disableUser,
@@ -14,6 +15,7 @@ import { useAuth } from "@/providers/auth-provider";
 
 export const userQueryKeys = {
   all: ["users"] as const,
+  roles: ["users", "roles"] as const,
 };
 
 export function useUsers() {
@@ -26,6 +28,20 @@ export function useUsers() {
       hasPermission("users:read"),
     queryKey: userQueryKeys.all,
     queryFn: getUsers,
+  });
+}
+
+export function useRoleCatalog() {
+  const { hasPermission, isAuthenticated } = useAuth();
+
+  return useQuery({
+    enabled:
+      Boolean(env.NEXT_PUBLIC_API_BASE_URL) &&
+      isAuthenticated &&
+      hasPermission("users:read"),
+    queryKey: userQueryKeys.roles,
+    queryFn: getRoleCatalog,
+    staleTime: 1000 * 60 * 15,
   });
 }
 

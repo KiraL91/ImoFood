@@ -38,6 +38,7 @@ Auth:
 
 - `POST /auth/login`
 - `POST /auth/refresh`
+- `GET /auth/roles`
 - Uses seeded users for local/test: `owner`, `member`, `readonly`.
 
 Health:
@@ -107,6 +108,7 @@ Users:
   - `AuthGuard` authenticates.
   - `PermissionsGuard` authorizes.
 - Session refresh uses `POST /auth/refresh` with the current bearer token and returns a renewed access token plus fresh user permissions.
+- Role catalog uses `GET /auth/roles`, requires `users:read`, and reflects the fixed system roles plus their current permissions.
 - Keep frontend `src/lib/types/auth.ts` aligned when permissions change.
 
 Roles:

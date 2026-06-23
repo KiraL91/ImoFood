@@ -15,6 +15,8 @@ import { AuthService } from "./auth.service";
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import { LoginDto } from "./dto/login.dto";
 import { UpdateMeDto } from "./dto/update-me.dto";
+import { Permissions } from "./permissions.decorator";
+import { PermissionsGuard } from "./permissions.guard";
 import type { AuthenticatedRequest } from "./types/authenticated-user";
 
 @Controller("auth")
@@ -30,6 +32,13 @@ export class AuthController {
   @UseGuards(AuthGuard)
   refresh(@Req() request: AuthenticatedRequest) {
     return this.authService.refreshSession(this.getRequestUser(request));
+  }
+
+  @Get("roles")
+  @UseGuards(AuthGuard, PermissionsGuard)
+  @Permissions("users:read")
+  roles() {
+    return this.authService.getRoleCatalog();
   }
 
   @Get("me")

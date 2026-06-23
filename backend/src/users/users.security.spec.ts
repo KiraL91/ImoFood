@@ -5,7 +5,11 @@ import { UserRole } from "@prisma/client";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getRolePermissions, type Permission } from "../auth/auth.constants";
+import {
+  getRoleCatalog,
+  getRolePermissions,
+  type Permission,
+} from "../auth/auth.constants";
 import { AuthService } from "../auth/auth.service";
 import { PermissionsGuard } from "../auth/permissions.guard";
 import { PrismaService } from "../prisma/prisma.service";
@@ -167,6 +171,33 @@ test("auth refresh returns a new session for the authenticated active user", () 
   assert.equal(payload.sub, authenticatedUser.id);
   assert.equal(payload.username, authenticatedUser.username);
   assert.equal(payload.role, authenticatedUser.role);
+});
+
+test("role catalog exposes the fixed roles with aligned permissions", () => {
+  const catalog = createAuthService({}).getRoleCatalog();
+
+  assert.deepEqual(
+    catalog.map((roleCatalogItem) => roleCatalogItem.role),
+    [UserRole.owner, UserRole.member, UserRole.readonly],
+  );
+
+  for (const roleCatalogItem of catalog) {
+    assert.equal(typeof roleCatalogItem.label, "string");
+    assert.notEqual(roleCatalogItem.label, "");
+    assert.equal(typeof roleCatalogItem.description, "string");
+    assert.notEqual(roleCatalogItem.description, "");
+    assert.deepEqual(
+      roleCatalogItem.permissions,
+      getRolePermissions(roleCatalogItem.role),
+    );
+  }
+
+  catalog[0]?.permissions.pop();
+
+  assert.deepEqual(
+    getRoleCatalog()[0]?.permissions,
+    getRolePermissions(UserRole.owner),
+  );
 });
 
 test("listing users never selects or returns passwordHash", async () => {
