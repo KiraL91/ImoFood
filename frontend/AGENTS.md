@@ -91,6 +91,7 @@ Important feature files:
 
 - Use `useAuth()` for `isAuthenticated`, `hasPermission`, current user.
 - Private app shell should redirect expired/invalid token flows to `/login`.
+- `AuthProvider` refreshes the session before token expiry through `POST /auth/refresh`.
 - Keep permission strings aligned with backend `auth.constants.ts`.
 
 Relevant permissions include:

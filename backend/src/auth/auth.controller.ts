@@ -26,6 +26,12 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post("refresh")
+  @UseGuards(AuthGuard)
+  refresh(@Req() request: AuthenticatedRequest) {
+    return this.authService.refreshSession(this.getRequestUser(request));
+  }
+
   @Get("me")
   @UseGuards(AuthGuard)
   me(@Req() request: AuthenticatedRequest) {

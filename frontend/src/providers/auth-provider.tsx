@@ -16,8 +16,14 @@ import {
   getStoredAuthSession,
   storeAuthSession,
 } from "@/features/auth/auth-storage";
-import { login as loginRequest, type LoginInput } from "@/features/auth/auth-api";
+import {
+  login as loginRequest,
+  refreshSession as refreshSessionRequest,
+  type LoginInput,
+} from "@/features/auth/auth-api";
 import type { AuthSession, AuthUser, Permission } from "@/lib/types/auth";
+
+const sessionRefreshLeadTimeMs = 5 * 60 * 1000;
 
 type AuthContextValue = {
   hasPermission: (permission: Permission) => boolean;
@@ -67,16 +73,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return;
     }
 
-    const delay = expiration * 1000 - Date.now();
+    const expiresAtMs = expiration * 1000;
 
-    if (delay <= 0) {
+    if (expiresAtMs <= Date.now()) {
       expireStoredAuthSession();
       return;
     }
 
-    const timeoutId = window.setTimeout(expireStoredAuthSession, delay);
+    let isCancelled = false;
+
+    async function refreshStoredSession() {
+      try {
+        const nextSession = await refreshSessionRequest();
+
+        if (isCancelled) {
+          return;
+        }
+
+        storeAuthSession(nextSession);
+        setSession(nextSession);
+      } catch {
+        if (!isCancelled) {
+          expireStoredAuthSession();
+        }
+      }
+    }
+
+    const refreshDelay = Math.max(expiresAtMs - Date.now() - sessionRefreshLeadTimeMs, 0);
+    const timeoutId = window.setTimeout(() => {
+      void refreshStoredSession();
+    }, refreshDelay);
 
     return () => {
+      isCancelled = true;
       window.clearTimeout(timeoutId);
     };
   }, [session]);

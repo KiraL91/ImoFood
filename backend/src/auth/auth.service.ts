@@ -70,6 +70,10 @@ export class AuthService {
     return this.toAuthenticatedUser(user);
   }
 
+  refreshSession(user: AuthenticatedUser): LoginResult {
+    return this.createSessionResult(user);
+  }
+
   async updateMe(
     userId: string,
     updateMeDto: UpdateMeDto,
@@ -178,11 +182,13 @@ export class AuthService {
   }
 
   private createLoginResult(user: AppUser): LoginResult {
-    const authenticatedUser = this.toAuthenticatedUser(user);
+    return this.createSessionResult(this.toAuthenticatedUser(user));
+  }
 
+  private createSessionResult(user: AuthenticatedUser): LoginResult {
     return {
-      accessToken: this.createAccessToken(authenticatedUser),
-      user: authenticatedUser,
+      accessToken: this.createAccessToken(user),
+      user,
     };
   }
 

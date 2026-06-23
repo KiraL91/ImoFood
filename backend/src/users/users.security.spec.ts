@@ -149,6 +149,26 @@ test("auth rejects inactive users on login and authenticated requests", async ()
   );
 });
 
+test("auth refresh returns a new session for the authenticated active user", () => {
+  const authService = createAuthService({});
+  const authenticatedUser = {
+    displayName: "Member",
+    email: "member@imo-meals.local",
+    id: "member-id",
+    permissions: getRolePermissions(UserRole.member),
+    role: UserRole.member,
+    username: "member",
+  };
+
+  const session = authService.refreshSession(authenticatedUser);
+  const payload = authService.verifyAccessToken(session.accessToken);
+
+  assert.deepEqual(session.user, authenticatedUser);
+  assert.equal(payload.sub, authenticatedUser.id);
+  assert.equal(payload.username, authenticatedUser.username);
+  assert.equal(payload.role, authenticatedUser.role);
+});
+
 test("listing users never selects or returns passwordHash", async () => {
   let findManyArgs: unknown;
   const prisma = {

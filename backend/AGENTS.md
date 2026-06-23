@@ -37,6 +37,7 @@ NestJS API for IMO Meals.
 Auth:
 
 - `POST /auth/login`
+- `POST /auth/refresh`
 - Uses seeded users for local/test: `owner`, `member`, `readonly`.
 
 Health:
@@ -105,6 +106,7 @@ Users:
 - Guards:
   - `AuthGuard` authenticates.
   - `PermissionsGuard` authorizes.
+- Session refresh uses `POST /auth/refresh` with the current bearer token and returns a renewed access token plus fresh user permissions.
 - Keep frontend `src/lib/types/auth.ts` aligned when permissions change.
 
 Roles:

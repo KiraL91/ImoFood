@@ -23,6 +23,12 @@ export function login(input: LoginInput): Promise<AuthSession> {
   });
 }
 
+export function refreshSession(): Promise<AuthSession> {
+  return apiClient<AuthSession>("/auth/refresh", {
+    method: "POST",
+  });
+}
+
 export function getCurrentUser(): Promise<AuthUser> {
   return apiClient<AuthUser>("/auth/me");
 }
