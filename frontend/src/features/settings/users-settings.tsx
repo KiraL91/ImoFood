@@ -491,12 +491,18 @@ export function UsersSettings() {
                 onChange={(event) =>
                   setCreateForm((current) => ({
                     ...current,
-                    username: event.target.value,
+                    username: event.target.value.toLowerCase(),
                   }))
                 }
+                autoCapitalize="none"
+                autoComplete="username"
                 disabled={createUserMutation.isPending}
+                inputMode="text"
                 maxLength={50}
+                minLength={3}
+                pattern="[a-z0-9_-]{3,50}"
                 required
+                title="Usa 3-50 caracteres: letras minusculas, numeros, guion o guion bajo."
               />
             </label>
 

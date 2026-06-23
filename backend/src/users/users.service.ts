@@ -12,6 +12,10 @@ import type { CreateUserDto } from "./dto/create-user.dto";
 import type { ResetUserPasswordDto } from "./dto/reset-user-password.dto";
 import type { UpdateUserDto } from "./dto/update-user.dto";
 import type { User } from "./types/user";
+import {
+  USERNAME_PATTERN,
+  USERNAME_PATTERN_DESCRIPTION,
+} from "./user.constants";
 
 const userSelect = {
   active: true,
@@ -253,10 +257,14 @@ export class UsersService {
   }
 
   private normalizeUsername(username: string): string {
-    const normalizedUsername = username.trim().toLowerCase();
+    const normalizedUsername = username.trim();
 
     if (!normalizedUsername) {
       throw new BadRequestException("Username is required.");
+    }
+
+    if (normalizedUsername !== username || !USERNAME_PATTERN.test(username)) {
+      throw new BadRequestException(USERNAME_PATTERN_DESCRIPTION);
     }
 
     return normalizedUsername;

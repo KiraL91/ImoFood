@@ -88,6 +88,7 @@ Users:
 - User audit is minimal last-action metadata on `AppUser`: `lastDisabled*`, `lastEnabled*`, and `passwordReset*`; it is not a full append-only audit log.
 - Auth must reject inactive users on login and authenticated requests.
 - Always preserve at least one active owner when changing roles or disabling users.
+- Usernames are 3-50 characters and match `[a-z0-9_-]`; reject invalid create input and store them lowercase.
 
 ## Context Hygiene
 
@@ -117,6 +118,7 @@ User management:
 - Only `owner` should receive `users:*` permissions.
 - Keep frontend `src/lib/types/auth.ts` aligned with backend permission changes.
 - Keep user DTOs explicit and avoid exposing password hashes through select/include shortcuts.
+- Keep username validation aligned with `src/users/user.constants.ts`.
 
 ## Prisma and Database
 

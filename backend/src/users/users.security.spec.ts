@@ -168,6 +168,50 @@ test("listing users never selects or returns passwordHash", async () => {
   assert.equal("passwordHash" in asRecord(users[0]), false);
 });
 
+test("creating users rejects usernames outside the strict username policy", async () => {
+  let createCalls = 0;
+  let findUniqueCalls = 0;
+  const prisma = {
+    appUser: {
+      create: async () => {
+        createCalls += 1;
+
+        return createPublicUser();
+      },
+      findUnique: async () => {
+        findUniqueCalls += 1;
+
+        return null;
+      },
+    },
+  };
+  const service = createUsersService(createAuthService({}), prisma);
+  const invalidUsernames = [
+    "",
+    "ab",
+    "Member",
+    "member name",
+    "member.name",
+    "member@",
+    "member ",
+  ];
+
+  for (const username of invalidUsernames) {
+    await assert.rejects(
+      () =>
+        service.create({
+          password: "valid-password",
+          role: UserRole.member,
+          username,
+        }),
+      BadRequestException,
+    );
+  }
+
+  assert.equal(findUniqueCalls, 0);
+  assert.equal(createCalls, 0);
+});
+
 test("disabling the last active owner is rejected", async () => {
   let updateCalls = 0;
   const prisma = {

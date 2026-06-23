@@ -113,6 +113,7 @@ Relevant permissions include:
 - Show reactivation actions only for inactive users with `hasPermission("users:enable")`.
 - Show other-user password reset only with `hasPermission("users:reset-password")`.
 - Show user audit metadata as compact secondary text; it represents last-action metadata, not a full history.
+- User creation should guide the same username policy as backend: 3-50 lowercase letters, numbers, hyphen, or underscore.
 
 ## API Client
 

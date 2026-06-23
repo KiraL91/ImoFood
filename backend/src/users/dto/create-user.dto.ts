@@ -4,15 +4,22 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   MinLength,
   ValidateIf,
 } from "class-validator";
 
+import {
+  USERNAME_PATTERN,
+  USERNAME_PATTERN_DESCRIPTION,
+} from "../user.constants";
+
 export class CreateUserDto {
   @IsString()
-  @MinLength(1)
+  @MinLength(3)
   @MaxLength(50)
+  @Matches(USERNAME_PATTERN, { message: USERNAME_PATTERN_DESCRIPTION })
   username!: string;
 
   @IsString()
