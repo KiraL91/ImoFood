@@ -123,6 +123,26 @@ export class UsersService {
     return this.toUser(updatedUser);
   }
 
+  async enable(id: string): Promise<User> {
+    const existingUser = await this.findUserOrThrow(id);
+
+    if (existingUser.active) {
+      return this.toUser(existingUser);
+    }
+
+    const updatedUser = await this.prisma.appUser.update({
+      data: {
+        active: true,
+      },
+      select: userSelect,
+      where: {
+        id,
+      },
+    });
+
+    return this.toUser(updatedUser);
+  }
+
   private async assertAnotherActiveOwner(userId: string): Promise<void> {
     const activeOwnerCount = await this.prisma.appUser.count({
       where: {

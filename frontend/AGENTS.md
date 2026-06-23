@@ -110,6 +110,7 @@ Relevant permissions include:
 - User admin UI lives in Settings and is shown only with `hasPermission("users:read")`.
 - Use `features/users/*` for API/query hooks and keep contracts in `lib/types/user.ts`.
 - Keep user management compact and mobile-first.
+- Show reactivation actions only for inactive users with `hasPermission("users:enable")`.
 - Do not add other-user password changes unless explicitly requested.
 
 ## API Client

@@ -47,4 +47,10 @@ export class UsersController {
   disable(@Param("id") id: string): Promise<User> {
     return this.usersService.disable(id);
   }
+
+  @Patch(":id/enable")
+  @Permissions("users:enable")
+  enable(@Param("id") id: string): Promise<User> {
+    return this.usersService.enable(id);
+  }
 }

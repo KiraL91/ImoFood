@@ -83,6 +83,7 @@ Users:
 - User admin is owner-only through `users:*` permissions.
 - Never return `passwordHash` from any user endpoint.
 - Disabled users use `AppUser.active = false`; do not physically delete users.
+- Reactivation uses `PATCH /users/:id/enable` and keeps the same user record.
 - Auth must reject inactive users on login and authenticated requests.
 - Always preserve at least one active owner when changing roles or disabling users.
 

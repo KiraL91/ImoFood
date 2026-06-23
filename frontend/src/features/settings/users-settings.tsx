@@ -1,11 +1,19 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { Pencil, Plus, ShieldCheck, UserMinus, UsersRound } from "lucide-react";
+import {
+  Pencil,
+  Plus,
+  ShieldCheck,
+  UserCheck,
+  UserMinus,
+  UsersRound,
+} from "lucide-react";
 import { getCurrentUser } from "@/features/auth/auth-api";
 import {
   useCreateUser,
   useDisableUser,
+  useEnableUser,
   useUpdateUser,
   useUsers,
 } from "@/features/users/users-queries";
@@ -64,10 +72,12 @@ export function UsersSettings() {
   const canCreateUsers = hasPermission("users:create");
   const canUpdateUsers = hasPermission("users:update");
   const canDisableUsers = hasPermission("users:disable");
+  const canEnableUsers = hasPermission("users:enable");
   const usersQuery = useUsers();
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
   const disableUserMutation = useDisableUser();
+  const enableUserMutation = useEnableUser();
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
@@ -192,6 +202,18 @@ export function UsersSettings() {
     }
   }
 
+  async function handleEnable(managedUser: ManagedUser) {
+    if (managedUser.active) {
+      return;
+    }
+
+    try {
+      await enableUserMutation.mutateAsync(managedUser.id);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "No se ha podido activar.");
+    }
+  }
+
   function isLastActiveOwner(managedUser: ManagedUser) {
     return managedUser.active && managedUser.role === "owner" && activeOwnerCount <= 1;
   }
@@ -287,7 +309,7 @@ export function UsersSettings() {
                         <Pencil aria-hidden="true" />
                       </Button>
                     )}
-                    {canDisableUsers && (
+                    {managedUser.active && canDisableUsers && (
                       <Button
                         type="button"
                         variant="outline"
@@ -302,6 +324,19 @@ export function UsersSettings() {
                         aria-label={`Desactivar ${managedUser.username}`}
                       >
                         <UserMinus aria-hidden="true" />
+                      </Button>
+                    )}
+                    {!managedUser.active && canEnableUsers && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        disabled={enableUserMutation.isPending}
+                        onClick={() => handleEnable(managedUser)}
+                        title="Activar usuario"
+                        aria-label={`Activar ${managedUser.username}`}
+                      >
+                        <UserCheck aria-hidden="true" />
                       </Button>
                     )}
                   </div>

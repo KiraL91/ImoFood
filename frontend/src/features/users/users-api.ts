@@ -56,3 +56,11 @@ export async function disableUser(id: string): Promise<ManagedUser> {
 
   return managedUserSchema.parse(data);
 }
+
+export async function enableUser(id: string): Promise<ManagedUser> {
+  const data = await apiClient<unknown>(`/users/${id}/enable`, {
+    method: "PATCH",
+  });
+
+  return managedUserSchema.parse(data);
+}
