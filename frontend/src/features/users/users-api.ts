@@ -19,6 +19,10 @@ export type UpdateUserInput = {
   role?: ManagedUserRole;
 };
 
+export type ResetUserPasswordInput = {
+  newPassword: string;
+};
+
 export async function getUsers(): Promise<ManagedUser[]> {
   const data = await apiClient<unknown>("/users");
 
@@ -63,4 +67,17 @@ export async function enableUser(id: string): Promise<ManagedUser> {
   });
 
   return managedUserSchema.parse(data);
+}
+
+export async function resetUserPassword({
+  id,
+  input,
+}: {
+  id: string;
+  input: ResetUserPasswordInput;
+}): Promise<void> {
+  await apiClient<void>(`/users/${id}/password`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
 }

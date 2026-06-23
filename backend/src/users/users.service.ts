@@ -9,6 +9,7 @@ import { Prisma, UserRole } from "@prisma/client";
 import { AuthService } from "../auth/auth.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateUserDto } from "./dto/create-user.dto";
+import type { ResetUserPasswordDto } from "./dto/reset-user-password.dto";
 import type { UpdateUserDto } from "./dto/update-user.dto";
 import type { User } from "./types/user";
 
@@ -141,6 +142,24 @@ export class UsersService {
     });
 
     return this.toUser(updatedUser);
+  }
+
+  async resetPassword(
+    id: string,
+    resetUserPasswordDto: ResetUserPasswordDto,
+  ): Promise<void> {
+    await this.findUserOrThrow(id);
+
+    await this.prisma.appUser.update({
+      data: {
+        passwordHash: this.authService.hashPassword(
+          resetUserPasswordDto.newPassword,
+        ),
+      },
+      where: {
+        id,
+      },
+    });
   }
 
   private async assertAnotherActiveOwner(userId: string): Promise<void> {

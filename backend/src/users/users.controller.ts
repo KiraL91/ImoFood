@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -12,6 +14,7 @@ import { AuthGuard } from "../auth/auth.guard";
 import { Permissions } from "../auth/permissions.decorator";
 import { PermissionsGuard } from "../auth/permissions.guard";
 import { CreateUserDto } from "./dto/create-user.dto";
+import { ResetUserPasswordDto } from "./dto/reset-user-password.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import type { User } from "./types/user";
 import { UsersService } from "./users.service";
@@ -52,5 +55,15 @@ export class UsersController {
   @Permissions("users:enable")
   enable(@Param("id") id: string): Promise<User> {
     return this.usersService.enable(id);
+  }
+
+  @Patch(":id/password")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Permissions("users:reset-password")
+  resetPassword(
+    @Param("id") id: string,
+    @Body() resetUserPasswordDto: ResetUserPasswordDto,
+  ): Promise<void> {
+    return this.usersService.resetPassword(id, resetUserPasswordDto);
   }
 }

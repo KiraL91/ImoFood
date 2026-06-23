@@ -111,7 +111,7 @@ Relevant permissions include:
 - Use `features/users/*` for API/query hooks and keep contracts in `lib/types/user.ts`.
 - Keep user management compact and mobile-first.
 - Show reactivation actions only for inactive users with `hasPermission("users:enable")`.
-- Do not add other-user password changes unless explicitly requested.
+- Show other-user password reset only with `hasPermission("users:reset-password")`.
 
 ## API Client
 

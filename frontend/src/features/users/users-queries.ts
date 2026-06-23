@@ -6,6 +6,7 @@ import {
   disableUser,
   enableUser,
   getUsers,
+  resetUserPassword,
   updateUser,
 } from "@/features/users/users-api";
 import { env } from "@/lib/env";
@@ -69,5 +70,11 @@ export function useEnableUser() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: userQueryKeys.all });
     },
+  });
+}
+
+export function useResetUserPassword() {
+  return useMutation({
+    mutationFn: resetUserPassword,
   });
 }

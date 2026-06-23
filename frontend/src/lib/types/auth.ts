@@ -31,7 +31,8 @@ export type Permission =
   | "users:create"
   | "users:update"
   | "users:disable"
-  | "users:enable";
+  | "users:enable"
+  | "users:reset-password";
 
 export type AuthUser = {
   displayName?: string;

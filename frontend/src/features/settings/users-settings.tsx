@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import {
+  KeyRound,
   Pencil,
   Plus,
   ShieldCheck,
@@ -14,6 +15,7 @@ import {
   useCreateUser,
   useDisableUser,
   useEnableUser,
+  useResetUserPassword,
   useUpdateUser,
   useUsers,
 } from "@/features/users/users-queries";
@@ -73,22 +75,29 @@ export function UsersSettings() {
   const canUpdateUsers = hasPermission("users:update");
   const canDisableUsers = hasPermission("users:disable");
   const canEnableUsers = hasPermission("users:enable");
+  const canResetUserPasswords = hasPermission("users:reset-password");
   const usersQuery = useUsers();
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
   const disableUserMutation = useDisableUser();
   const enableUserMutation = useEnableUser();
+  const resetUserPasswordMutation = useResetUserPassword();
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
+  const [resettingUser, setResettingUser] = useState<ManagedUser | null>(null);
   const [createForm, setCreateForm] = useState<CreateUserForm>(emptyCreateForm);
   const [editForm, setEditForm] = useState<EditUserForm>({
     displayName: "",
     email: "",
     role: "member",
   });
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
   const [createStatus, setCreateStatus] = useState<FormStatus | null>(null);
   const [editStatus, setEditStatus] = useState<FormStatus | null>(null);
+  const [resetPasswordStatus, setResetPasswordStatus] = useState<FormStatus | null>(null);
   const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
 
   const activeOwnerCount = useMemo(
@@ -117,6 +126,14 @@ export function UsersSettings() {
     });
     setEditStatus(null);
     setEditOpen(true);
+  }
+
+  function openResetPasswordDialog(managedUser: ManagedUser) {
+    setResettingUser(managedUser);
+    setResetPassword("");
+    setResetPasswordConfirm("");
+    setResetPasswordStatus(null);
+    setResetPasswordOpen(true);
   }
 
   async function refreshCurrentUserIfNeeded(managedUserId: string) {
@@ -175,6 +192,45 @@ export function UsersSettings() {
     } catch (error) {
       setEditStatus({
         message: error instanceof Error ? error.message : "No se ha podido guardar.",
+        type: "error",
+      });
+    }
+  }
+
+  async function handleResetPasswordSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!resettingUser) {
+      return;
+    }
+
+    setResetPasswordStatus(null);
+
+    if (resetPassword !== resetPasswordConfirm) {
+      setResetPasswordStatus({
+        message: "La nueva contrasena no coincide.",
+        type: "error",
+      });
+      return;
+    }
+
+    try {
+      await resetUserPasswordMutation.mutateAsync({
+        id: resettingUser.id,
+        input: {
+          newPassword: resetPassword,
+        },
+      });
+      setResetPasswordOpen(false);
+      setResettingUser(null);
+      setResetPassword("");
+      setResetPasswordConfirm("");
+    } catch (error) {
+      setResetPasswordStatus({
+        message:
+          error instanceof Error
+            ? error.message
+            : "No se ha podido resetear la contrasena.",
         type: "error",
       });
     }
@@ -307,6 +363,18 @@ export function UsersSettings() {
                         aria-label={`Editar ${managedUser.username}`}
                       >
                         <Pencil aria-hidden="true" />
+                      </Button>
+                    )}
+                    {canResetUserPasswords && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => openResetPasswordDialog(managedUser)}
+                        title="Resetear contrasena"
+                        aria-label={`Resetear contrasena de ${managedUser.username}`}
+                      >
+                        <KeyRound aria-hidden="true" />
                       </Button>
                     )}
                     {managedUser.active && canDisableUsers && (
@@ -468,6 +536,69 @@ export function UsersSettings() {
             <Button type="submit" disabled={createUserMutation.isPending}>
               <ShieldCheck aria-hidden="true" />
               {createUserMutation.isPending ? "Creando..." : "Crear usuario"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      <Dialog
+        open={resetPasswordOpen}
+        onOpenChange={setResetPasswordOpen}
+        title="Resetear contrasena"
+        description={resettingUser?.username}
+        className="max-w-2xl"
+      >
+        <form className="space-y-4" onSubmit={handleResetPasswordSubmit}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-2 text-sm font-medium">
+              Nueva contrasena
+              <Input
+                value={resetPassword}
+                onChange={(event) => setResetPassword(event.target.value)}
+                disabled={resetUserPasswordMutation.isPending}
+                minLength={8}
+                maxLength={128}
+                type="password"
+                autoComplete="new-password"
+                required
+              />
+            </label>
+
+            <label className="space-y-2 text-sm font-medium">
+              Confirmar contrasena
+              <Input
+                value={resetPasswordConfirm}
+                onChange={(event) => setResetPasswordConfirm(event.target.value)}
+                disabled={resetUserPasswordMutation.isPending}
+                minLength={8}
+                maxLength={128}
+                type="password"
+                autoComplete="new-password"
+                required
+              />
+            </label>
+          </div>
+
+          {resetPasswordStatus && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {resetPasswordStatus.message}
+            </div>
+          )}
+
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setResetPasswordOpen(false)}
+              disabled={resetUserPasswordMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={resetUserPasswordMutation.isPending}>
+              <KeyRound aria-hidden="true" />
+              {resetUserPasswordMutation.isPending
+                ? "Guardando..."
+                : "Resetear contrasena"}
             </Button>
           </div>
         </form>
