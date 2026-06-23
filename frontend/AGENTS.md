@@ -83,6 +83,7 @@ Important feature files:
   - saving AI suggestions as recipes.
 - Food creation supports on-demand AI fill:
   - user enters name.
+  - exact normalized name duplicates block saving and AI fill; related token matches only warn.
   - user presses `Sugerir con IA`.
   - backend returns category/status/tolerance/serving/notes/tags.
   - fields remain editable before saving.

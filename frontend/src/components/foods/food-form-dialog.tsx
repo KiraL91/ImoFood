@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Loader2, Plus, Save, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -25,7 +25,9 @@ type FoodFormState = {
 type FoodFormDialogProps = {
   disabledReason?: string;
   errorMessage?: string | null;
+  existingFoods?: Food[];
   initialFood?: Food;
+  isCheckingExistingFoods?: boolean;
   isDisabled?: boolean;
   isOpen: boolean;
   isSuggestingWithAi?: boolean;
@@ -34,6 +36,7 @@ type FoodFormDialogProps = {
   onSuggestWithAi?: (input: SuggestFoodInfoInput) => Promise<AiFoodInfoSuggestion>;
   onCancel?: () => void;
   onOpenChange: (open: boolean) => void;
+  onViewExistingFood?: (food: Food) => void;
   onSubmit?: (input: CreateFoodInput) => Promise<void> | void;
   suggestionDisabledReason?: string;
 };
@@ -47,6 +50,74 @@ const emptyFormState: FoodFormState = {
   tags: "",
   tolerance: "5",
 };
+
+const emptyExistingFoods: Food[] = [];
+
+const foodNameStopWords = new Set([
+  "a",
+  "al",
+  "con",
+  "de",
+  "del",
+  "el",
+  "en",
+  "la",
+  "las",
+  "los",
+  "para",
+  "por",
+  "sin",
+  "y",
+]);
+
+function getFoodNameTokens(value: string) {
+  const normalizedValue = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+  if (!normalizedValue) {
+    return [];
+  }
+
+  return normalizedValue
+    .split(/\s+/)
+    .filter((token) => token.length > 0 && !foodNameStopWords.has(token));
+}
+
+function getComparableFoodName(value: string) {
+  return getFoodNameTokens(value).join(" ");
+}
+
+function getRelatedFoods(name: string, foods: Food[]) {
+  const nameTokens = getFoodNameTokens(name);
+  const nameTokenSet = new Set(nameTokens);
+
+  if (nameTokens.length === 0) {
+    return [];
+  }
+
+  return foods
+    .map((food) => {
+      const foodTokens = getFoodNameTokens(food.name);
+      const foodTokenSet = new Set(foodTokens);
+      const sharedTokenCount = nameTokens.filter((token) =>
+        foodTokenSet.has(token),
+      ).length;
+
+      return {
+        food,
+        score: sharedTokenCount * 10 - Math.abs(nameTokenSet.size - foodTokenSet.size),
+        sharedTokenCount,
+      };
+    })
+    .filter(({ sharedTokenCount }) => sharedTokenCount > 0)
+    .sort((a, b) => b.score - a.score || a.food.name.localeCompare(b.food.name))
+    .slice(0, 5)
+    .map(({ food }) => food);
+}
 
 function toFormState(food?: Food): FoodFormState {
   if (!food) {
@@ -95,7 +166,9 @@ function getErrorMessage(error: unknown) {
 export function FoodFormDialog({
   disabledReason,
   errorMessage,
+  existingFoods = emptyExistingFoods,
   initialFood,
+  isCheckingExistingFoods = false,
   isDisabled = false,
   isOpen,
   isSuggestingWithAi = false,
@@ -104,6 +177,7 @@ export function FoodFormDialog({
   onSuggestWithAi,
   onCancel,
   onOpenChange,
+  onViewExistingFood,
   onSubmit,
   suggestionDisabledReason,
 }: FoodFormDialogProps) {
@@ -112,17 +186,57 @@ export function FoodFormDialog({
   const [suggestionFeedback, setSuggestionFeedback] = useState<string | null>(null);
   const disabled = isDisabled || isSubmitting;
   const isEditing = mode === "edit";
+  const isDuplicateCheckPending = !isEditing && isCheckingExistingFoods;
+  const comparableFoodName = useMemo(
+    () => getComparableFoodName(formState.name),
+    [formState.name],
+  );
+  const foodsForDuplicateCheck = useMemo(
+    () => existingFoods.filter((food) => food.id !== initialFood?.id),
+    [existingFoods, initialFood?.id],
+  );
+  const exactExistingFood = useMemo(() => {
+    if (isEditing || comparableFoodName.length === 0) {
+      return undefined;
+    }
+
+    return foodsForDuplicateCheck.find(
+      (food) => getComparableFoodName(food.name) === comparableFoodName,
+    );
+  }, [comparableFoodName, foodsForDuplicateCheck, isEditing]);
+  const relatedFoods = useMemo(() => {
+    if (isEditing || exactExistingFood || comparableFoodName.length === 0) {
+      return [];
+    }
+
+    return getRelatedFoods(formState.name, foodsForDuplicateCheck);
+  }, [
+    comparableFoodName,
+    exactExistingFood,
+    foodsForDuplicateCheck,
+    formState.name,
+    isEditing,
+  ]);
+  const hasExactFoodNameDuplicate = Boolean(exactExistingFood);
   const canSuggestWithAi = !isEditing && Boolean(onSuggestWithAi);
   const suggestionButtonDisabled =
     disabled ||
+    isDuplicateCheckPending ||
+    hasExactFoodNameDuplicate ||
     !canSuggestWithAi ||
     isSuggestingWithAi ||
     formState.name.trim().length < 2;
-  const suggestionButtonTitle = !canSuggestWithAi
-    ? (suggestionDisabledReason ?? "La sugerencia con IA no esta disponible.")
-    : formState.name.trim().length < 2
-      ? "Escribe primero el nombre del alimento."
-      : "Rellenar campos con una propuesta de IA.";
+  const submitButtonDisabled =
+    disabled || isDuplicateCheckPending || hasExactFoodNameDuplicate;
+  const suggestionButtonTitle = isDuplicateCheckPending
+    ? "Comprobando alimentos existentes."
+    : hasExactFoodNameDuplicate
+      ? "Ya existe este alimento. Revisa su ficha antes de pedir IA."
+      : !canSuggestWithAi
+        ? (suggestionDisabledReason ?? "La sugerencia con IA no esta disponible.")
+        : formState.name.trim().length < 2
+          ? "Escribe primero el nombre del alimento."
+          : "Rellenar campos con una propuesta de IA.";
 
   useEffect(() => {
     if (isOpen) {
@@ -135,7 +249,7 @@ export function FoodFormDialog({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!onSubmit || disabled) {
+    if (!onSubmit || submitButtonDisabled) {
       return;
     }
 
@@ -241,6 +355,49 @@ export function FoodFormDialog({
               {suggestionFeedback}
             </p>
           )}
+          {isDuplicateCheckPending && (
+            <p className="text-xs font-normal leading-5 text-muted-foreground">
+              Comprobando alimentos existentes...
+            </p>
+          )}
+          {exactExistingFood && (
+            <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs font-normal leading-5 text-destructive">
+              <p>
+                Ya existe un alimento equivalente:{" "}
+                <span className="font-medium">{exactExistingFood.name}</span>.
+              </p>
+              {onViewExistingFood && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0 text-destructive"
+                  onClick={() => onViewExistingFood(exactExistingFood)}
+                >
+                  Ver alimento existente
+                </Button>
+              )}
+            </div>
+          )}
+          {!exactExistingFood && relatedFoods.length > 0 && (
+            <div className="space-y-2 rounded-md border bg-secondary/50 p-3 text-xs font-normal leading-5 text-muted-foreground">
+              <p>Alimentos relacionados:</p>
+              <div className="flex flex-wrap gap-2">
+                {relatedFoods.map((food) => (
+                  <Button
+                    key={food.id}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => onViewExistingFood?.(food)}
+                  >
+                    {food.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <label className="space-y-2 text-sm font-medium">
@@ -341,7 +498,7 @@ export function FoodFormDialog({
         </label>
 
         <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-4">
-          <Button type="submit" disabled={disabled}>
+          <Button type="submit" disabled={submitButtonDisabled}>
             {isEditing ? <Save aria-hidden="true" /> : <Plus aria-hidden="true" />}
             {isSubmitting
               ? "Guardando..."

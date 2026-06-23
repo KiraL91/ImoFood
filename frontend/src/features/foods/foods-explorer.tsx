@@ -130,6 +130,13 @@ export function FoodsExplorer() {
     setDetailFood(food);
   }
 
+  function handleViewExistingFood(food: Food) {
+    setIsFoodDialogOpen(false);
+    setEditingFood(undefined);
+    setMutationError(null);
+    setDetailFood(food);
+  }
+
   function handleFoodDialogOpenChange(open: boolean) {
     setIsFoodDialogOpen(open);
 
@@ -184,7 +191,9 @@ export function FoodsExplorer() {
       <FoodFormDialog
         disabledReason={disabledReason}
         errorMessage={mutationError}
+        existingFoods={foods}
         initialFood={editingFood}
+        isCheckingExistingFoods={foodsQuery.isLoading}
         isDisabled={isFormDisabled}
         isOpen={isFoodDialogOpen}
         isSuggestingWithAi={suggestFoodInfoMutation.isPending}
@@ -198,6 +207,7 @@ export function FoodsExplorer() {
           setMutationError(null);
         }}
         onOpenChange={handleFoodDialogOpenChange}
+        onViewExistingFood={handleViewExistingFood}
         onSubmit={handleFoodSubmit}
         suggestionDisabledReason={
           !hasBackendConfigured
