@@ -115,6 +115,7 @@ Relevant permissions include:
 - Show other-user password reset only with `hasPermission("users:reset-password")`.
 - Show user audit metadata as compact secondary text; it represents last-action metadata, not a full history.
 - User creation should guide the same username policy as backend: 3-50 lowercase letters, numbers, hyphen, or underscore.
+- Sensitive user admin actions such as disable, enable, role changes, and password resets should require an explicit username confirmation in the UI.
 
 ## API Client
 

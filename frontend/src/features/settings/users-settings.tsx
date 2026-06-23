@@ -53,6 +53,15 @@ type EditUserForm = {
   role: ManagedUserRole;
 };
 
+type UserAction = "disable" | "enable";
+
+type UserActionConfirmation = {
+  action: UserAction;
+  confirmation: string;
+  status: FormStatus | null;
+  user: ManagedUser;
+};
+
 const emptyCreateForm: CreateUserForm = {
   displayName: "",
   email: "",
@@ -68,6 +77,32 @@ const roleLabels: Record<ManagedUserRole, string> = {
 };
 
 const roleOptions: ManagedUserRole[] = ["owner", "member", "readonly"];
+
+const userActionCopy: Record<
+  UserAction,
+  {
+    confirmLabel: string;
+    errorMessage: string;
+    pendingLabel: string;
+    submitLabel: string;
+    title: string;
+  }
+> = {
+  disable: {
+    confirmLabel: "Confirmar desactivacion",
+    errorMessage: "No se ha podido desactivar.",
+    pendingLabel: "Desactivando...",
+    submitLabel: "Desactivar usuario",
+    title: "Desactivar usuario",
+  },
+  enable: {
+    confirmLabel: "Confirmar activacion",
+    errorMessage: "No se ha podido activar.",
+    pendingLabel: "Activando...",
+    submitLabel: "Activar usuario",
+    title: "Activar usuario",
+  },
+};
 
 export function UsersSettings() {
   const { hasPermission, logout, updateUser: updateSessionUser, user } = useAuth();
@@ -86,6 +121,8 @@ export function UsersSettings() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [userActionConfirmation, setUserActionConfirmation] =
+    useState<UserActionConfirmation | null>(null);
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
   const [resettingUser, setResettingUser] = useState<ManagedUser | null>(null);
   const [createForm, setCreateForm] = useState<CreateUserForm>(emptyCreateForm);
@@ -94,8 +131,10 @@ export function UsersSettings() {
     email: "",
     role: "member",
   });
+  const [editRoleConfirmation, setEditRoleConfirmation] = useState("");
   const [resetPassword, setResetPassword] = useState("");
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
+  const [resetPasswordUserConfirmation, setResetPasswordUserConfirmation] = useState("");
   const [createStatus, setCreateStatus] = useState<FormStatus | null>(null);
   const [editStatus, setEditStatus] = useState<FormStatus | null>(null);
   const [resetPasswordStatus, setResetPasswordStatus] = useState<FormStatus | null>(null);
@@ -129,16 +168,47 @@ export function UsersSettings() {
       email: managedUser.email ?? "",
       role: managedUser.role,
     });
+    setEditRoleConfirmation("");
     setEditStatus(null);
     setEditOpen(true);
+  }
+
+  function closeEditDialog() {
+    setEditOpen(false);
+    setEditingUser(null);
+    setEditRoleConfirmation("");
+    setEditStatus(null);
   }
 
   function openResetPasswordDialog(managedUser: ManagedUser) {
     setResettingUser(managedUser);
     setResetPassword("");
     setResetPasswordConfirm("");
+    setResetPasswordUserConfirmation("");
     setResetPasswordStatus(null);
     setResetPasswordOpen(true);
+  }
+
+  function closeResetPasswordDialog() {
+    setResetPasswordOpen(false);
+    setResettingUser(null);
+    setResetPassword("");
+    setResetPasswordConfirm("");
+    setResetPasswordUserConfirmation("");
+    setResetPasswordStatus(null);
+  }
+
+  function openUserActionConfirmation(managedUser: ManagedUser, action: UserAction) {
+    setUserActionConfirmation({
+      action,
+      confirmation: "",
+      status: null,
+      user: managedUser,
+    });
+  }
+
+  function closeUserActionConfirmation() {
+    setUserActionConfirmation(null);
   }
 
   function getActorLabel(userId?: string) {
@@ -222,6 +292,17 @@ export function UsersSettings() {
 
     setEditStatus(null);
 
+    if (
+      editForm.role !== editingUser.role &&
+      editRoleConfirmation !== editingUser.username
+    ) {
+      setEditStatus({
+        message: "Escribe el usuario exacto para confirmar el cambio de rol.",
+        type: "error",
+      });
+      return;
+    }
+
     try {
       const updatedUser = await updateUserMutation.mutateAsync({
         id: editingUser.id,
@@ -233,8 +314,7 @@ export function UsersSettings() {
       });
 
       await refreshCurrentUserIfNeeded(updatedUser.id);
-      setEditOpen(false);
-      setEditingUser(null);
+      closeEditDialog();
     } catch (error) {
       setEditStatus({
         message: error instanceof Error ? error.message : "No se ha podido guardar.",
@@ -260,6 +340,14 @@ export function UsersSettings() {
       return;
     }
 
+    if (resetPasswordUserConfirmation !== resettingUser.username) {
+      setResetPasswordStatus({
+        message: "Escribe el usuario exacto para confirmar el reseteo.",
+        type: "error",
+      });
+      return;
+    }
+
     try {
       await resetUserPasswordMutation.mutateAsync({
         id: resettingUser.id,
@@ -267,10 +355,7 @@ export function UsersSettings() {
           newPassword: resetPassword,
         },
       });
-      setResetPasswordOpen(false);
-      setResettingUser(null);
-      setResetPassword("");
-      setResetPasswordConfirm("");
+      closeResetPasswordDialog();
     } catch (error) {
       setResetPasswordStatus({
         message:
@@ -282,43 +367,82 @@ export function UsersSettings() {
     }
   }
 
-  async function handleDisable(managedUser: ManagedUser) {
-    if (!managedUser.active) {
+  async function handleUserActionSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!userActionConfirmation) {
       return;
     }
 
-    if (!window.confirm(`Desactivar ${managedUser.username}?`)) {
-      return;
-    }
-
-    try {
-      const disabledUser = await disableUserMutation.mutateAsync(managedUser.id);
-
-      if (disabledUser.id === user?.id) {
-        logout();
-      }
-    } catch (error) {
-      window.alert(
-        error instanceof Error ? error.message : "No se ha podido desactivar.",
+    if (userActionConfirmation.confirmation !== userActionConfirmation.user.username) {
+      setUserActionConfirmation((current) =>
+        current
+          ? {
+              ...current,
+              status: {
+                message: "Escribe el usuario exacto para confirmar la accion.",
+                type: "error",
+              },
+            }
+          : current,
       );
-    }
-  }
-
-  async function handleEnable(managedUser: ManagedUser) {
-    if (managedUser.active) {
       return;
     }
 
+    const confirmedAction = userActionConfirmation;
+    const { action, user: managedUser } = confirmedAction;
+
     try {
-      await enableUserMutation.mutateAsync(managedUser.id);
+      if (action === "disable") {
+        const disabledUser = await disableUserMutation.mutateAsync(managedUser.id);
+
+        if (disabledUser.id === user?.id) {
+          logout();
+        }
+      } else {
+        await enableUserMutation.mutateAsync(managedUser.id);
+      }
+
+      closeUserActionConfirmation();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "No se ha podido activar.");
+      setUserActionConfirmation((current) =>
+        current
+          ? {
+              ...current,
+              status: {
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : userActionCopy[confirmedAction.action].errorMessage,
+                type: "error",
+              },
+            }
+          : current,
+      );
     }
   }
 
   function isLastActiveOwner(managedUser: ManagedUser) {
     return managedUser.active && managedUser.role === "owner" && activeOwnerCount <= 1;
   }
+
+  const isUserActionPending =
+    disableUserMutation.isPending || enableUserMutation.isPending;
+  const activeUserAction = userActionConfirmation
+    ? userActionCopy[userActionConfirmation.action]
+    : null;
+  const isUserActionConfirmed = userActionConfirmation
+    ? userActionConfirmation.confirmation === userActionConfirmation.user.username
+    : false;
+  const needsRoleConfirmation = Boolean(
+    editingUser && editForm.role !== editingUser.role,
+  );
+  const isRoleChangeConfirmed =
+    !needsRoleConfirmation ||
+    Boolean(editingUser && editRoleConfirmation === editingUser.username);
+  const isResetPasswordUserConfirmed = Boolean(
+    resettingUser && resetPasswordUserConfirmation === resettingUser.username,
+  );
 
   return (
     <section className="space-y-4">
@@ -441,7 +565,7 @@ export function UsersSettings() {
                           disableUserMutation.isPending ||
                           isLastActiveOwner(managedUser)
                         }
-                        onClick={() => handleDisable(managedUser)}
+                        onClick={() => openUserActionConfirmation(managedUser, "disable")}
                         title="Desactivar usuario"
                         aria-label={`Desactivar ${managedUser.username}`}
                       >
@@ -454,7 +578,7 @@ export function UsersSettings() {
                         variant="outline"
                         size="icon"
                         disabled={enableUserMutation.isPending}
-                        onClick={() => handleEnable(managedUser)}
+                        onClick={() => openUserActionConfirmation(managedUser, "enable")}
                         title="Activar usuario"
                         aria-label={`Activar ${managedUser.username}`}
                       >
@@ -603,7 +727,13 @@ export function UsersSettings() {
 
       <Dialog
         open={resetPasswordOpen}
-        onOpenChange={setResetPasswordOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setResetPasswordOpen(true);
+          } else {
+            closeResetPasswordDialog();
+          }
+        }}
         title="Resetear contrasena"
         description={resettingUser?.username}
         className="max-w-2xl"
@@ -639,6 +769,23 @@ export function UsersSettings() {
             </label>
           </div>
 
+          {resettingUser && (
+            <label className="block space-y-2 text-sm font-medium">
+              Confirmar usuario
+              <Input
+                value={resetPasswordUserConfirmation}
+                onChange={(event) => setResetPasswordUserConfirmation(event.target.value)}
+                autoComplete="off"
+                disabled={resetUserPasswordMutation.isPending}
+                placeholder={resettingUser.username}
+                required
+              />
+              <span className="block text-xs leading-5 text-muted-foreground">
+                Escribe {resettingUser.username} para resetear su contrasena.
+              </span>
+            </label>
+          )}
+
           {resetPasswordStatus && (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {resetPasswordStatus.message}
@@ -649,12 +796,17 @@ export function UsersSettings() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setResetPasswordOpen(false)}
+              onClick={closeResetPasswordDialog}
               disabled={resetUserPasswordMutation.isPending}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={resetUserPasswordMutation.isPending}>
+            <Button
+              type="submit"
+              disabled={
+                resetUserPasswordMutation.isPending || !isResetPasswordUserConfirmed
+              }
+            >
               <KeyRound aria-hidden="true" />
               {resetUserPasswordMutation.isPending
                 ? "Guardando..."
@@ -666,7 +818,13 @@ export function UsersSettings() {
 
       <Dialog
         open={editOpen}
-        onOpenChange={setEditOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setEditOpen(true);
+          } else {
+            closeEditDialog();
+          }
+        }}
         title="Editar usuario"
         description={editingUser?.username}
         className="max-w-2xl"
@@ -733,6 +891,24 @@ export function UsersSettings() {
             </label>
           </div>
 
+          {needsRoleConfirmation && editingUser && (
+            <label className="block space-y-2 text-sm font-medium">
+              Confirmar cambio de rol
+              <Input
+                value={editRoleConfirmation}
+                onChange={(event) => setEditRoleConfirmation(event.target.value)}
+                autoComplete="off"
+                disabled={updateUserMutation.isPending}
+                placeholder={editingUser.username}
+                required
+              />
+              <span className="block text-xs leading-5 text-muted-foreground">
+                Escribe {editingUser.username} para cambiar su rol a{" "}
+                {roleLabels[editForm.role]}.
+              </span>
+            </label>
+          )}
+
           {editStatus && (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {editStatus.message}
@@ -743,18 +919,95 @@ export function UsersSettings() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setEditOpen(false)}
+              onClick={closeEditDialog}
               disabled={updateUserMutation.isPending}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={updateUserMutation.isPending}>
+            <Button
+              type="submit"
+              disabled={updateUserMutation.isPending || !isRoleChangeConfirmed}
+            >
               <ShieldCheck aria-hidden="true" />
               {updateUserMutation.isPending ? "Guardando..." : "Guardar"}
             </Button>
           </div>
         </form>
       </Dialog>
+
+      {activeUserAction && userActionConfirmation && (
+        <Dialog
+          open={Boolean(userActionConfirmation)}
+          onOpenChange={(open) => {
+            if (!open) {
+              closeUserActionConfirmation();
+            }
+          }}
+          title={activeUserAction.title}
+          description={userActionConfirmation.user.username}
+          className="max-w-lg"
+        >
+          <form className="space-y-4" onSubmit={handleUserActionSubmit}>
+            <label className="block space-y-2 text-sm font-medium">
+              {activeUserAction.confirmLabel}
+              <Input
+                value={userActionConfirmation.confirmation}
+                onChange={(event) =>
+                  setUserActionConfirmation((current) =>
+                    current
+                      ? {
+                          ...current,
+                          confirmation: event.target.value,
+                          status: null,
+                        }
+                      : current,
+                  )
+                }
+                autoComplete="off"
+                disabled={isUserActionPending}
+                placeholder={userActionConfirmation.user.username}
+                required
+              />
+              <span className="block text-xs leading-5 text-muted-foreground">
+                Escribe {userActionConfirmation.user.username} para confirmar.
+              </span>
+            </label>
+
+            {userActionConfirmation.status && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {userActionConfirmation.status.message}
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeUserActionConfirmation}
+                disabled={isUserActionPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant={
+                  userActionConfirmation.action === "disable" ? "destructive" : "default"
+                }
+                disabled={isUserActionPending || !isUserActionConfirmed}
+              >
+                {userActionConfirmation.action === "disable" ? (
+                  <UserMinus aria-hidden="true" />
+                ) : (
+                  <UserCheck aria-hidden="true" />
+                )}
+                {isUserActionPending
+                  ? activeUserAction.pendingLabel
+                  : activeUserAction.submitLabel}
+              </Button>
+            </div>
+          </form>
+        </Dialog>
+      )}
     </section>
   );
 }
