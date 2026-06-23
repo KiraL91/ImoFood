@@ -178,6 +178,15 @@ npm.cmd run lint
 npm.cmd run build
 ```
 
+Run backend tests when touching auth, permissions, or user management:
+
+```powershell
+cd C:\Desarrollo\ImoFoods\backend
+npm.cmd run test
+```
+
+Backend tests use Node's built-in test runner. Specs live beside source as `*.spec.ts` and compile through `tsconfig.test.json` into `dist-test`.
+
 When schema or seeds change, also consider:
 
 ```powershell
