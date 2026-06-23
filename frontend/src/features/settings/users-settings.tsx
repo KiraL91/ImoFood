@@ -83,7 +83,7 @@ const roleLabels: Record<ManagedUserRole, string> = {
   readonly: "Readonly",
 };
 
-const roleOptions: ManagedUserRole[] = ["owner", "member", "readonly"];
+const fallbackRoleOptions: ManagedUserRole[] = ["owner", "member", "readonly"];
 
 const rolePermissionGroups: PermissionGroup[] = [
   {
@@ -212,6 +212,13 @@ export function UsersSettings() {
       ),
     [roleCatalog],
   );
+  const availableRoleOptions = useMemo(
+    () =>
+      roleCatalog.length > 0
+        ? roleCatalog.map((roleCatalogItem) => roleCatalogItem.role)
+        : fallbackRoleOptions,
+    [roleCatalog],
+  );
   const userById = useMemo(
     () => new Map(users.map((managedUser) => [managedUser.id, managedUser])),
     [users],
@@ -327,6 +334,10 @@ export function UsersSettings() {
 
   function getRoleLabel(role: ManagedUserRole) {
     return roleCatalogByRole.get(role)?.label ?? roleLabels[role];
+  }
+
+  function getRoleDescription(role: ManagedUserRole) {
+    return roleCatalogByRole.get(role)?.description;
   }
 
   function summarizePermissions(
@@ -897,12 +908,17 @@ export function UsersSettings() {
                 disabled={createUserMutation.isPending}
                 className="h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground shadow-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {roleOptions.map((role) => (
+                {availableRoleOptions.map((role) => (
                   <option key={role} value={role}>
                     {getRoleLabel(role)}
                   </option>
                 ))}
               </select>
+              {getRoleDescription(createForm.role) && (
+                <span className="block text-xs leading-5 text-muted-foreground">
+                  {getRoleDescription(createForm.role)}
+                </span>
+              )}
             </label>
           </div>
 
@@ -1079,7 +1095,7 @@ export function UsersSettings() {
                 disabled={updateUserMutation.isPending}
                 className="h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground shadow-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {roleOptions.map((role) => (
+                {availableRoleOptions.map((role) => (
                   <option
                     key={role}
                     value={role}
@@ -1092,6 +1108,11 @@ export function UsersSettings() {
                   </option>
                 ))}
               </select>
+              {getRoleDescription(editForm.role) && (
+                <span className="block text-xs leading-5 text-muted-foreground">
+                  {getRoleDescription(editForm.role)}
+                </span>
+              )}
             </label>
           </div>
 
