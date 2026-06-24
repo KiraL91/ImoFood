@@ -87,6 +87,7 @@ Important feature files:
   - user presses `Sugerir con IA`.
   - backend returns category/status/tolerance/serving/notes/tags.
   - fields remain editable before saving.
+- PWA scope is currently installable-only: manifest, icons and mobile metadata are OK, but do not add service workers, offline caching or API response caching without an explicit request.
 
 ## Auth and Permissions
 

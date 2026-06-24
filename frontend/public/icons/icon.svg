@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="IMO Meals">
+  <rect width="512" height="512" rx="112" fill="#2f6f5e" />
+  <circle cx="256" cy="266" r="132" fill="#fbfaf7" />
+  <circle cx="256" cy="266" r="101" fill="none" stroke="#d8d0bd" stroke-width="18" />
+  <ellipse cx="269" cy="237" rx="98" ry="47" transform="rotate(-28 269 237)" fill="#7fb36a" />
+  <path
+    d="M194 294c46-47 101-82 160-104"
+    fill="none"
+    stroke="#2f6f5e"
+    stroke-linecap="round"
+    stroke-width="18"
+  />
+  <path
+    d="M183 323c41 31 104 38 158 12"
+    fill="none"
+    stroke="#2f6f5e"
+    stroke-linecap="round"
+    stroke-width="18"
+  />
+</svg>

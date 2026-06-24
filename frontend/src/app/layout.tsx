@@ -12,6 +12,14 @@ export const metadata: Metadata = {
   },
   description: "Gestor de comidas, alimentos y recetas para IMO/SIBO.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
   appleWebApp: {
     capable: true,
     title: "IMO Meals",
@@ -20,6 +28,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  colorScheme: "light",
   themeColor: "#2f6f5e",
 };
 
