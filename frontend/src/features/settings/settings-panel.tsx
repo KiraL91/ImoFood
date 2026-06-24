@@ -41,30 +41,7 @@ export function SettingsPanel() {
   );
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {settings.map((item) => {
-          const Icon = item.icon;
-
-          return (
-            <Card key={item.label}>
-              <CardHeader>
-                <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                  <Icon className="size-5" aria-hidden="true" />
-                </div>
-                <CardTitle>{item.label}</CardTitle>
-                <CardDescription>{item.value}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-2 rounded-sm bg-muted">
-                  <div className="h-2 w-2/3 rounded-sm bg-primary" />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </section>
-
+    <div className="space-y-8">
       <UserProfileSettings />
 
       <UsersSettings />
@@ -107,6 +84,29 @@ export function SettingsPanel() {
           description="Contrato actual de datos del frontend."
           value={preferenceByKey.get("backendIntegration")}
         />
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {settings.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <Card key={item.label}>
+              <CardHeader>
+                <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                  <Icon className="size-5" aria-hidden="true" />
+                </div>
+                <CardTitle>{item.label}</CardTitle>
+                <CardDescription>{item.value}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-2 rounded-sm bg-muted">
+                  <div className="h-2 w-2/3 rounded-sm bg-primary" />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </section>
     </div>
   );

@@ -118,9 +118,9 @@ export function UserProfileSettings() {
   return (
     <section className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold">Perfil</h3>
+        <h3 className="text-lg font-semibold">Mi perfil</h3>
         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-          Datos basicos de la cuenta activa.
+          Datos basicos de la cuenta activa y contrasena.
         </p>
       </div>
 

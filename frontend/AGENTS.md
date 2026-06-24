@@ -63,6 +63,7 @@ Important feature files:
 - Keep forms low-friction. Prefer optional fields and sensible defaults.
 - Do not save AI output automatically; AI suggestions populate editable drafts only.
 - User administration belongs in Settings, stays compact/mobile-first, and should be shown only with `hasPermission("users:read")`.
+- Settings should prioritize "Mi perfil" first, then owner-only administration, with technical/mock preference context below those operational sections.
 
 ## Context Hygiene
 

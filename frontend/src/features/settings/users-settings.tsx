@@ -573,9 +573,9 @@ export function UsersSettings() {
     <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Usuarios</h3>
+          <h3 className="text-lg font-semibold">Administracion</h3>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Accesos disponibles para esta instalacion.
+            Gestion de cuentas y accesos para esta instalacion.
           </p>
         </div>
         {canCreateUsers && (
