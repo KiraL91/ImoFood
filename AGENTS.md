@@ -25,7 +25,7 @@ Core domains already present:
 - Symptom logs: tracking values 0-10, can relate to meal logs.
 - Treatments: active treatments and intake logs.
 - Dashboard: "Hoy" daily view with follow-up actions.
-- Settings: visual preferences/future integrations.
+- Settings: own profile, owner-only user administration and future integrations.
 
 ## Stack
 

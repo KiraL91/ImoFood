@@ -186,6 +186,7 @@ export function UsersSettings() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [showRoleCatalog, setShowRoleCatalog] = useState(false);
   const [userActionConfirmation, setUserActionConfirmation] =
     useState<UserActionConfirmation | null>(null);
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
@@ -725,93 +726,107 @@ export function UsersSettings() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-            <ShieldCheck className="size-5" aria-hidden="true" />
+        <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+              <ShieldCheck className="size-5" aria-hidden="true" />
+            </div>
+            <div>
+              <CardTitle>Roles</CardTitle>
+              <CardDescription>
+                {roleCatalog.length > 0
+                  ? `${roleCatalog.length} roles del sistema`
+                  : "Roles del sistema"}
+              </CardDescription>
+            </div>
           </div>
-          <CardTitle>Roles</CardTitle>
-          <CardDescription>
-            {roleCatalog.length > 0
-              ? `${roleCatalog.length} roles del sistema`
-              : "Roles del sistema"}
-          </CardDescription>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRoleCatalog((current) => !current)}
+          >
+            {showRoleCatalog ? "Ocultar permisos" : "Ver permisos"}
+          </Button>
         </CardHeader>
-        <CardContent>
-          {roleCatalogQuery.isLoading && (
-            <div className="rounded-md border bg-secondary p-3 text-sm">
-              Cargando roles...
-            </div>
-          )}
+        {showRoleCatalog && (
+          <CardContent>
+            {roleCatalogQuery.isLoading && (
+              <div className="rounded-md border bg-secondary p-3 text-sm">
+                Cargando roles...
+              </div>
+            )}
 
-          {roleCatalogQuery.isError && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              No se han podido cargar los roles.
-            </div>
-          )}
+            {roleCatalogQuery.isError && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                No se han podido cargar los roles.
+              </div>
+            )}
 
-          {!roleCatalogQuery.isLoading && !roleCatalogQuery.isError && (
-            <div className="overflow-x-auto rounded-md border">
-              <table className="min-w-[720px] table-fixed text-left text-sm">
-                <thead className="bg-secondary text-xs text-muted-foreground">
-                  <tr>
-                    <th className="w-36 px-4 py-3 font-medium uppercase" scope="col">
-                      Area
-                    </th>
-                    {roleCatalog.map((roleCatalogItem) => (
-                      <th
-                        key={roleCatalogItem.role}
-                        className="px-4 py-3 align-top"
-                        scope="col"
-                      >
-                        <div className="text-sm font-semibold text-foreground">
-                          {roleCatalogItem.label}
-                        </div>
-                        <div className="mt-1 normal-case leading-5">
-                          {roleCatalogItem.description}
-                        </div>
-                        <div className="mt-1 font-normal normal-case">
-                          {roleCatalogItem.permissions.length} permisos
-                        </div>
+            {!roleCatalogQuery.isLoading && !roleCatalogQuery.isError && (
+              <div className="overflow-x-auto rounded-md border">
+                <table className="min-w-[720px] table-fixed text-left text-sm">
+                  <thead className="bg-secondary text-xs text-muted-foreground">
+                    <tr>
+                      <th className="w-36 px-4 py-3 font-medium uppercase" scope="col">
+                        Area
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rolePermissionGroups.map((permissionGroup) => (
-                    <tr key={permissionGroup.label} className="border-t">
-                      <th
-                        className="px-4 py-3 text-sm font-medium text-foreground"
-                        scope="row"
-                      >
-                        {permissionGroup.label}
-                      </th>
-                      {roleCatalog.map((roleCatalogItem) => {
-                        const summary = summarizePermissions(
-                          roleCatalogItem.permissions,
-                          permissionGroup,
-                        );
-
-                        return (
-                          <td key={roleCatalogItem.role} className="px-4 py-3">
-                            <Badge variant={getPermissionSummaryVariant(summary)}>
-                              {summary}
-                            </Badge>
-                          </td>
-                        );
-                      })}
+                      {roleCatalog.map((roleCatalogItem) => (
+                        <th
+                          key={roleCatalogItem.role}
+                          className="px-4 py-3 align-top"
+                          scope="col"
+                        >
+                          <div className="text-sm font-semibold text-foreground">
+                            {roleCatalogItem.label}
+                          </div>
+                          <div className="mt-1 normal-case leading-5">
+                            {roleCatalogItem.description}
+                          </div>
+                          <div className="mt-1 font-normal normal-case">
+                            {roleCatalogItem.permissions.length} permisos
+                          </div>
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rolePermissionGroups.map((permissionGroup) => (
+                      <tr key={permissionGroup.label} className="border-t">
+                        <th
+                          className="px-4 py-3 text-sm font-medium text-foreground"
+                          scope="row"
+                        >
+                          {permissionGroup.label}
+                        </th>
+                        {roleCatalog.map((roleCatalogItem) => {
+                          const summary = summarizePermissions(
+                            roleCatalogItem.permissions,
+                            permissionGroup,
+                          );
 
-              {roleCatalog.length === 0 && (
-                <div className="px-4 py-6 text-sm text-muted-foreground">
-                  No hay roles disponibles.
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
+                          return (
+                            <td key={roleCatalogItem.role} className="px-4 py-3">
+                              <Badge variant={getPermissionSummaryVariant(summary)}>
+                                {summary}
+                              </Badge>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {roleCatalog.length === 0 && (
+                  <div className="px-4 py-6 text-sm text-muted-foreground">
+                    No hay roles disponibles.
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        )}
       </Card>
 
       <Dialog
