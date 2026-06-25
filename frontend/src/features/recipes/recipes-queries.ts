@@ -8,7 +8,6 @@ import {
   updateRecipe,
 } from "@/features/recipes/recipes-api";
 import { env } from "@/lib/env";
-import { recipes as mockRecipes } from "@/lib/mock/recipes";
 import { useAuth } from "@/providers/auth-provider";
 
 export const recipeQueryKeys = {
@@ -19,15 +18,9 @@ export function useRecipes() {
   const { isAuthenticated } = useAuth();
 
   return useQuery({
-    enabled: !env.NEXT_PUBLIC_API_BASE_URL || isAuthenticated,
+    enabled: Boolean(env.NEXT_PUBLIC_API_BASE_URL) && isAuthenticated,
     queryKey: recipeQueryKeys.all,
-    queryFn: async () => {
-      if (!env.NEXT_PUBLIC_API_BASE_URL) {
-        return mockRecipes;
-      }
-
-      return getRecipes();
-    },
+    queryFn: () => getRecipes(),
   });
 }
 

@@ -231,8 +231,8 @@ export function RecipesExplorer() {
         <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
           <Server className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p>
-            Mostrando recetas mock. Para usar el CRUD real, levanta el backend y define
-            NEXT_PUBLIC_API_BASE_URL=http://localhost:4000 en frontend/.env.local.
+            Configura NEXT_PUBLIC_API_BASE_URL=http://localhost:4000 en
+            frontend/.env.local para consultar recetas.
           </p>
         </div>
       )}

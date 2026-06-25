@@ -8,7 +8,6 @@ import {
   updateMealLog,
 } from "@/features/meal-logs/meal-logs-api";
 import { env } from "@/lib/env";
-import { mealLogs as mockMealLogs } from "@/lib/mock/meal-logs";
 import { useAuth } from "@/providers/auth-provider";
 
 export const mealLogQueryKeys = {
@@ -19,15 +18,9 @@ export function useMealLogs() {
   const { isAuthenticated } = useAuth();
 
   return useQuery({
-    enabled: !env.NEXT_PUBLIC_API_BASE_URL || isAuthenticated,
+    enabled: Boolean(env.NEXT_PUBLIC_API_BASE_URL) && isAuthenticated,
     queryKey: mealLogQueryKeys.all,
-    queryFn: async () => {
-      if (!env.NEXT_PUBLIC_API_BASE_URL) {
-        return mockMealLogs;
-      }
-
-      return getMealLogs();
-    },
+    queryFn: () => getMealLogs(),
   });
 }
 

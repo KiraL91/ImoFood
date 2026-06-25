@@ -12,8 +12,6 @@ import {
   updateTreatmentLog,
 } from "@/features/treatments/treatments-api";
 import { env } from "@/lib/env";
-import { treatmentLogs as mockTreatmentLogs } from "@/lib/mock/treatment-logs";
-import { treatments as mockTreatments } from "@/lib/mock/treatments";
 import { useAuth } from "@/providers/auth-provider";
 
 export const treatmentQueryKeys = {
@@ -25,15 +23,9 @@ export function useTreatments() {
   const { isAuthenticated } = useAuth();
 
   return useQuery({
-    enabled: !env.NEXT_PUBLIC_API_BASE_URL || isAuthenticated,
+    enabled: Boolean(env.NEXT_PUBLIC_API_BASE_URL) && isAuthenticated,
     queryKey: treatmentQueryKeys.all,
-    queryFn: async () => {
-      if (!env.NEXT_PUBLIC_API_BASE_URL) {
-        return mockTreatments;
-      }
-
-      return getTreatments();
-    },
+    queryFn: () => getTreatments(),
   });
 }
 
@@ -41,15 +33,9 @@ export function useTreatmentLogs() {
   const { isAuthenticated } = useAuth();
 
   return useQuery({
-    enabled: !env.NEXT_PUBLIC_API_BASE_URL || isAuthenticated,
+    enabled: Boolean(env.NEXT_PUBLIC_API_BASE_URL) && isAuthenticated,
     queryKey: treatmentQueryKeys.logs,
-    queryFn: async () => {
-      if (!env.NEXT_PUBLIC_API_BASE_URL) {
-        return mockTreatmentLogs;
-      }
-
-      return getTreatmentLogs();
-    },
+    queryFn: () => getTreatmentLogs(),
   });
 }
 

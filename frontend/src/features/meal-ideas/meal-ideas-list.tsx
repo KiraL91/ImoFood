@@ -409,8 +409,8 @@ export function MealIdeasList() {
         <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
           <Server className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p>
-            Mostrando sugerencias generadas desde mocks. Configura
-            NEXT_PUBLIC_API_BASE_URL para usar alimentos y recetas reales.
+            Configura NEXT_PUBLIC_API_BASE_URL para generar ideas con alimentos y recetas
+            reales.
           </p>
         </div>
       )}

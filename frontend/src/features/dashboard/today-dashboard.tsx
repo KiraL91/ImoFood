@@ -448,9 +448,7 @@ export function TodayDashboard() {
       {!env.NEXT_PUBLIC_API_BASE_URL && (
         <div className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-sm">
           <Server className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <p>
-            Mostrando datos mock. Configura NEXT_PUBLIC_API_BASE_URL para usar el backend.
-          </p>
+          <p>Configura NEXT_PUBLIC_API_BASE_URL para cargar datos reales.</p>
         </div>
       )}
 

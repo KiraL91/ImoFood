@@ -116,7 +116,7 @@ Typical URLs:
 Frontend:
 
 - `NEXT_PUBLIC_API_BASE_URL` points to backend.
-- If unset, some screens use mocks and write actions are disabled.
+- If unset, backend-backed screens stay empty/disabled and show configuration guidance.
 
 Backend:
 

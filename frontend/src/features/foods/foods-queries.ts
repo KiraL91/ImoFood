@@ -9,7 +9,6 @@ import {
   updateFood,
 } from "@/features/foods/foods-api";
 import { env } from "@/lib/env";
-import { foods as mockFoods } from "@/lib/mock/foods";
 import { useAuth } from "@/providers/auth-provider";
 
 export const foodQueryKeys = {
@@ -20,15 +19,9 @@ export function useFoods() {
   const { isAuthenticated } = useAuth();
 
   return useQuery({
-    enabled: !env.NEXT_PUBLIC_API_BASE_URL || isAuthenticated,
+    enabled: Boolean(env.NEXT_PUBLIC_API_BASE_URL) && isAuthenticated,
     queryKey: foodQueryKeys.all,
-    queryFn: async () => {
-      if (!env.NEXT_PUBLIC_API_BASE_URL) {
-        return mockFoods;
-      }
-
-      return getFoods();
-    },
+    queryFn: () => getFoods(),
   });
 }
 

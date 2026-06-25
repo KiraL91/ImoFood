@@ -8,7 +8,6 @@ import {
   updateSymptomLog,
 } from "@/features/symptoms/symptom-logs-api";
 import { env } from "@/lib/env";
-import { symptomLogs as mockSymptomLogs } from "@/lib/mock/symptom-logs";
 import { useAuth } from "@/providers/auth-provider";
 
 export const symptomLogQueryKeys = {
@@ -19,15 +18,9 @@ export function useSymptomLogs() {
   const { isAuthenticated } = useAuth();
 
   return useQuery({
-    enabled: !env.NEXT_PUBLIC_API_BASE_URL || isAuthenticated,
+    enabled: Boolean(env.NEXT_PUBLIC_API_BASE_URL) && isAuthenticated,
     queryKey: symptomLogQueryKeys.all,
-    queryFn: async () => {
-      if (!env.NEXT_PUBLIC_API_BASE_URL) {
-        return mockSymptomLogs;
-      }
-
-      return getSymptomLogs();
-    },
+    queryFn: () => getSymptomLogs(),
   });
 }
 
