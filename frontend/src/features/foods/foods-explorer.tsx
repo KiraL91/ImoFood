@@ -307,7 +307,12 @@ export function FoodsExplorer() {
       )}
 
       <section className="rounded-lg border bg-card p-4 shadow-sm sm:p-5">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+        <div
+          className={cn(
+            "grid gap-4 xl:items-start",
+            canCreateFood && "xl:grid-cols-[minmax(0,1fr)_auto]",
+          )}
+        >
           <div className="space-y-4">
             <label className="relative block">
               <Search
@@ -353,16 +358,18 @@ export function FoodsExplorer() {
             </div>
           </div>
 
-          <Button
-            type="button"
-            className="w-full xl:w-auto"
-            disabled={!canOpenCreateDialog}
-            title={canOpenCreateDialog ? "Anadir alimento" : disabledReason}
-            onClick={handleOpenCreateFoodDialog}
-          >
-            <Plus aria-hidden="true" />
-            Anadir alimento
-          </Button>
+          {canCreateFood && (
+            <Button
+              type="button"
+              className="w-full xl:w-auto"
+              disabled={!canOpenCreateDialog}
+              title={canOpenCreateDialog ? "Anadir alimento" : disabledReason}
+              onClick={handleOpenCreateFoodDialog}
+            >
+              <Plus aria-hidden="true" />
+              Anadir alimento
+            </Button>
+          )}
         </div>
       </section>
 
@@ -398,17 +405,19 @@ export function FoodsExplorer() {
         </div>
       )}
 
-      <Button
-        type="button"
-        size="icon"
-        className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
-        disabled={!canOpenCreateDialog}
-        title={canOpenCreateDialog ? "Anadir alimento" : disabledReason}
-        aria-label="Anadir alimento"
-        onClick={handleOpenCreateFoodDialog}
-      >
-        <Plus aria-hidden="true" />
-      </Button>
+      {canCreateFood && (
+        <Button
+          type="button"
+          size="icon"
+          className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg sm:bottom-6 sm:right-6"
+          disabled={!canOpenCreateDialog}
+          title={canOpenCreateDialog ? "Anadir alimento" : disabledReason}
+          aria-label="Anadir alimento"
+          onClick={handleOpenCreateFoodDialog}
+        >
+          <Plus aria-hidden="true" />
+        </Button>
+      )}
     </div>
   );
 }
