@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   authSessionExpiredEvent,
   clearStoredAuthSession,
@@ -43,12 +44,14 @@ type AuthProviderProps = {
 };
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<AuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     function handleAuthSessionExpired() {
       clearStoredAuthSession();
+      queryClient.clear();
       setSession(null);
     }
 
@@ -59,7 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       window.removeEventListener(authSessionExpiredEvent, handleAuthSessionExpired);
     };
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     if (!session) {
@@ -80,6 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return;
     }
 
+    const currentUserId = session.user.id;
     let isCancelled = false;
 
     async function refreshStoredSession() {
@@ -91,6 +95,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         storeAuthSession(nextSession);
+        if (currentUserId !== nextSession.user.id) {
+          queryClient.clear();
+        }
         setSession(nextSession);
       } catch {
         if (!isCancelled) {
@@ -108,7 +115,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isCancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [session]);
+  }, [queryClient, session]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -119,10 +126,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       login: async (input) => {
         const nextSession = await loginRequest(input);
         storeAuthSession(nextSession);
+        if (session?.user.id !== nextSession.user.id) {
+          queryClient.clear();
+        }
         setSession(nextSession);
       },
       logout: () => {
         clearStoredAuthSession();
+        queryClient.clear();
         setSession(null);
       },
       session,
@@ -144,7 +155,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       },
       user: session?.user ?? null,
     }),
-    [isLoading, session],
+    [isLoading, queryClient, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
