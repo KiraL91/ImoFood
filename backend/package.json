@@ -12,7 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "node prisma/seed.mjs",
-    "test": "tsc -p tsconfig.test.json && node --test dist-test/users/users.security.spec.js",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/users/users.security.spec.js dist-test/data-ownership/data-ownership.spec.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write ."
