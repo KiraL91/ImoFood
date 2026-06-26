@@ -52,6 +52,7 @@ Foods:
 - Includes `suggestedServing`.
 - Food statuses: `allowed`, `testing`, `caution`, `avoid`.
 - Tolerance: integer 1-5.
+- Personal per authenticated user; always scope read/update/delete by `userId`.
 
 Recipes:
 
@@ -63,7 +64,7 @@ Meal logs:
 
 - CRUD under `/meal-logs`.
 - Can link recipes and concrete foods.
-- Linked recipes must belong to the same user; foods remain shared catalog records.
+- Linked recipes and foods must belong to the same user.
 - Personal per authenticated user; always scope read/update/delete by `userId`.
 
 Symptom logs:
@@ -85,7 +86,7 @@ AI:
 - `POST /ai/suggestions/meal-ideas`
 - `POST /ai/suggestions/food-info`
 - Protected by auth and `ai-suggestions:*` permissions.
-- Meal ideas may read shared foods, but recipe context must be scoped to the authenticated user.
+- Meal ideas and food-info context must be scoped to the authenticated user's foods and recipes.
 
 Users:
 

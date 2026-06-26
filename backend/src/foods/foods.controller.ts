@@ -9,12 +9,15 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  UnauthorizedException,
   UseGuards,
 } from "@nestjs/common";
 
 import { AuthGuard } from "../auth/auth.guard";
 import { Permissions } from "../auth/permissions.decorator";
 import { PermissionsGuard } from "../auth/permissions.guard";
+import type { AuthenticatedRequest } from "../auth/types/authenticated-user";
 import { CreateFoodDto } from "./dto/create-food.dto";
 import { UpdateFoodDto } from "./dto/update-food.dto";
 import { FoodsService } from "./foods.service";
@@ -28,12 +31,13 @@ export class FoodsController {
   @Get()
   @Permissions("foods:read")
   findAll(
+    @Req() request: AuthenticatedRequest,
     @Query("search") search?: string,
     @Query("status") status?: FoodStatus,
     @Query("category") category?: string,
     @Query("tag") tag?: string,
   ): Promise<Food[]> {
-    return this.foodsService.findAll({
+    return this.foodsService.findAll(this.getRequestUserId(request), {
       category,
       search,
       status,
@@ -43,29 +47,54 @@ export class FoodsController {
 
   @Get(":id")
   @Permissions("foods:read")
-  findOne(@Param("id") id: string): Promise<Food> {
-    return this.foodsService.findOne(id);
+  findOne(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ): Promise<Food> {
+    return this.foodsService.findOne(id, this.getRequestUserId(request));
   }
 
   @Post()
   @Permissions("foods:create")
-  create(@Body() createFoodDto: CreateFoodDto): Promise<Food> {
-    return this.foodsService.create(createFoodDto);
+  create(
+    @Req() request: AuthenticatedRequest,
+    @Body() createFoodDto: CreateFoodDto,
+  ): Promise<Food> {
+    return this.foodsService.create(
+      createFoodDto,
+      this.getRequestUserId(request),
+    );
   }
 
   @Patch(":id")
   @Permissions("foods:update")
   update(
+    @Req() request: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() updateFoodDto: UpdateFoodDto,
   ): Promise<Food> {
-    return this.foodsService.update(id, updateFoodDto);
+    return this.foodsService.update(
+      id,
+      updateFoodDto,
+      this.getRequestUserId(request),
+    );
   }
 
   @Delete(":id")
   @Permissions("foods:delete")
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param("id") id: string): Promise<void> {
-    await this.foodsService.remove(id);
+  async remove(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ): Promise<void> {
+    await this.foodsService.remove(id, this.getRequestUserId(request));
+  }
+
+  private getRequestUserId(request: AuthenticatedRequest): string {
+    if (!request.user) {
+      throw new UnauthorizedException("Authenticated user was not found.");
+    }
+
+    return request.user.id;
   }
 }

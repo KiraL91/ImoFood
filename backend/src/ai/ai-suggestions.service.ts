@@ -126,6 +126,7 @@ export class AiSuggestionsService {
 
   async generateFoodInfo(
     createFoodInfoSuggestionDto: CreateFoodInfoSuggestionDto,
+    userId: string,
   ): Promise<AiFoodInfoSuggestionResult> {
     if (createFoodInfoSuggestionDto.name.trim().length < 2) {
       throw new BadRequestException("Food name is required.");
@@ -137,7 +138,7 @@ export class AiSuggestionsService {
       );
     }
 
-    const context = await this.getFoodInfoContext();
+    const context = await this.getFoodInfoContext(userId);
     const prompt = this.buildFoodInfoPrompt(
       createFoodInfoSuggestionDto,
       context,
@@ -184,6 +185,7 @@ export class AiSuggestionsService {
             tolerance: {
               gte: 4,
             },
+            userId,
           },
         }),
         this.prisma.food.findMany({
@@ -206,6 +208,7 @@ export class AiSuggestionsService {
             tolerance: {
               gte: 3,
             },
+            userId,
           },
         }),
         this.prisma.food.findMany({
@@ -228,6 +231,7 @@ export class AiSuggestionsService {
                 },
               },
             ],
+            userId,
           },
         }),
         this.prisma.recipe.findMany({
@@ -263,7 +267,7 @@ export class AiSuggestionsService {
     };
   }
 
-  private async getFoodInfoContext(): Promise<FoodInfoContext> {
+  private async getFoodInfoContext(userId: string): Promise<FoodInfoContext> {
     const foods = await this.prisma.food.findMany({
       orderBy: {
         name: "asc",
@@ -276,6 +280,9 @@ export class AiSuggestionsService {
         tolerance: true,
       },
       take: 120,
+      where: {
+        userId,
+      },
     });
     const categories = Array.from(
       new Set(

@@ -23,6 +23,8 @@ enum UserRole {
 
 model Food {
   id               String        @id @default(cuid())
+  userId           String
+  user             AppUser       @relation(fields: [userId], references: [id])
   name             String
   category         String
   status           FoodStatus
@@ -34,6 +36,9 @@ model Food {
   updatedAt        DateTime      @updatedAt
   mealLogs         MealLogFood[]
 
+  @@index([userId, name])
+  @@index([userId, category])
+  @@index([userId, status])
   @@index([category])
   @@index([status])
 }
@@ -166,6 +171,7 @@ model AppUser {
   role                  UserRole       @default(member)
   active                Boolean        @default(true)
   passwordHash          String
+  foods                 Food[]
   recipes               Recipe[]
   mealLogs              MealLog[]
   symptomLogs           SymptomLog[]

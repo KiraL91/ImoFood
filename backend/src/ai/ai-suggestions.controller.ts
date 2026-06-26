@@ -47,10 +47,12 @@ export class AiSuggestionsController {
   @Post("suggestions/food-info")
   @Permissions("ai-suggestions:create")
   generateFoodInfo(
+    @Req() request: AuthenticatedRequest,
     @Body() createFoodInfoSuggestionDto: CreateFoodInfoSuggestionDto,
   ): Promise<AiFoodInfoSuggestionResult> {
     return this.aiSuggestionsService.generateFoodInfo(
       createFoodInfoSuggestionDto,
+      this.getRequestUserId(request),
     );
   }
 

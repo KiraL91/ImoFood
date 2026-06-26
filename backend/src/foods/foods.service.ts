@@ -25,13 +25,15 @@ const foodStatusToPrisma: Record<Food["status"], PrismaFoodStatus> = {
 export class FoodsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filters: FoodFilters = {}): Promise<Food[]> {
+  async findAll(userId: string, filters: FoodFilters = {}): Promise<Food[]> {
     this.assertValidStatus(filters.status);
 
     const search = filters.search?.trim().toLowerCase();
     const category = filters.category?.trim().toLowerCase();
     const tag = filters.tag?.trim().toLowerCase();
-    const where: Prisma.FoodWhereInput = {};
+    const where: Prisma.FoodWhereInput = {
+      userId,
+    };
 
     if (filters.status) {
       where.status = foodStatusToPrisma[filters.status];
@@ -94,10 +96,11 @@ export class FoodsService {
     return foods.map((food) => this.toFood(food));
   }
 
-  async findOne(id: string): Promise<Food> {
-    const food = await this.prisma.food.findUnique({
+  async findOne(id: string, userId: string): Promise<Food> {
+    const food = await this.prisma.food.findFirst({
       where: {
         id,
+        userId,
       },
     });
 
@@ -108,7 +111,7 @@ export class FoodsService {
     return this.toFood(food);
   }
 
-  async create(createFoodDto: CreateFoodDto): Promise<Food> {
+  async create(createFoodDto: CreateFoodDto, userId: string): Promise<Food> {
     const food = await this.prisma.food.create({
       data: {
         category: createFoodDto.category.trim(),
@@ -118,14 +121,23 @@ export class FoodsService {
         suggestedServing: createFoodDto.suggestedServing?.trim() || undefined,
         tags: this.normalizeTags(createFoodDto.tags),
         tolerance: createFoodDto.tolerance,
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
       },
     });
 
     return this.toFood(food);
   }
 
-  async update(id: string, updateFoodDto: UpdateFoodDto): Promise<Food> {
-    await this.findOne(id);
+  async update(
+    id: string,
+    updateFoodDto: UpdateFoodDto,
+    userId: string,
+  ): Promise<Food> {
+    await this.findOne(id, userId);
 
     const data: Prisma.FoodUpdateInput = {
       category: updateFoodDto.category?.trim(),
@@ -154,8 +166,8 @@ export class FoodsService {
     return this.toFood(updatedFood);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(id: string, userId: string): Promise<void> {
+    await this.findOne(id, userId);
 
     await this.prisma.food.delete({
       where: {

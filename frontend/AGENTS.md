@@ -77,6 +77,7 @@ Important feature files:
 - Mobile navigation is grouped by user mental model, including "Mi diario".
 - Dashboard is a daily "Hoy" overview with direct actions.
 - Foods cards are compact; full details are in `FoodDetailDialog`.
+- Foods are personal per authenticated user even though the API contract does not expose `userId`.
 - Recipe cards show prep time, ingredient count, rating, ingredients and accessible steps.
 - Recipes are personal per authenticated user even though the API contract does not expose `userId`.
 - Meal ideas support:

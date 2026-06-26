@@ -79,7 +79,7 @@ export class MealLogsService {
       await this.ensureRecipeExists(recipeId, userId);
     }
 
-    await this.ensureFoodsExist(foodIds);
+    await this.ensureFoodsExist(foodIds, userId);
 
     const mealLog = await this.prisma.mealLog.create({
       data: {
@@ -132,7 +132,7 @@ export class MealLogsService {
     }
 
     if (foodIds !== undefined) {
-      await this.ensureFoodsExist(foodIds);
+      await this.ensureFoodsExist(foodIds, userId);
     }
 
     const data: Prisma.MealLogUpdateInput = {
@@ -253,7 +253,10 @@ export class MealLogsService {
     }
   }
 
-  private async ensureFoodsExist(foodIds: string[]): Promise<void> {
+  private async ensureFoodsExist(
+    foodIds: string[],
+    userId: string,
+  ): Promise<void> {
     if (foodIds.length === 0) {
       return;
     }
@@ -266,6 +269,7 @@ export class MealLogsService {
         id: {
           in: foodIds,
         },
+        userId,
       },
     });
     const existingFoodIds = new Set(foods.map((food) => food.id));
