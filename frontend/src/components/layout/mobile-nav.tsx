@@ -23,39 +23,47 @@ export function MobileNav() {
   return (
     <>
       {openGroup?.type === "group" && (
-        <div className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 rounded-lg border bg-card p-3 shadow-lg backdrop-blur lg:hidden">
-          <div className="mb-3">
-            <p className="text-sm font-semibold">{openGroup.label}</p>
-          </div>
-          <div className="grid gap-2">
-            {openGroup.items.map((item) => {
-              const isActive = isNavigationItemActive(pathname, item);
-              const Icon = item.icon;
+        <>
+          <button
+            type="button"
+            aria-label="Cerrar menu"
+            className="fixed inset-0 z-30 bg-foreground/15 backdrop-blur-[1px] lg:hidden"
+            onClick={() => setOpenGroupId(null)}
+          />
+          <div className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-50 rounded-lg border border-primary/20 bg-white p-3 text-popover-foreground shadow-[0_24px_60px_rgba(39,33,28,0.24)] ring-1 ring-foreground/10 lg:hidden">
+            <div className="mb-3">
+              <p className="text-sm font-semibold">{openGroup.label}</p>
+            </div>
+            <div className="grid gap-2">
+              {openGroup.items.map((item) => {
+                const isActive = isNavigationItemActive(pathname, item);
+                const Icon = item.icon;
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                    isActive
-                      ? "bg-secondary text-secondary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  <span className="min-w-0">
-                    <span className="block font-medium">{item.label}</span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {item.description}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                      isActive
+                        ? "bg-secondary text-secondary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" aria-hidden="true" />
+                    <span className="min-w-0">
+                      <span className="block font-medium">{item.label}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {item.description}
+                      </span>
                     </span>
-                  </span>
-                </Link>
-              );
-            })}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       <nav
