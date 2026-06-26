@@ -29,7 +29,8 @@ Core domains already present:
 
 Data ownership:
 
-- Foods, recipes, meal logs, symptom logs, treatments, and treatment logs are personal per authenticated user.
+- Foods are a shared catalog with per-user `FoodPreference` overlays.
+- Recipes, meal logs, symptom logs, treatments, and treatment logs are personal per authenticated user.
 
 ## Stack
 
@@ -49,6 +50,7 @@ Data ownership:
 - After implementing a user-requested code change, run relevant validation and create a git commit automatically.
 - Do not push unless the user asks.
 - Foods are a shared catalog. Owner manages catalog items; user-specific food state lives in `FoodPreference`.
+- Food responses expose whether the user's effective status/tolerance/notes differ from catalog defaults.
 
 ## Context Hygiene
 

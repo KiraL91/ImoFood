@@ -50,13 +50,34 @@ export function FoodDetailDialog({
           <Badge variant="outline" className={status.badgeClassName}>
             {status.label}
           </Badge>
+          {food.customPreferenceFields.status && (
+            <Badge variant="secondary">Estado personalizado</Badge>
+          )}
           <Badge variant="secondary">{food.category}</Badge>
           <Badge variant="outline">Tolerancia {food.tolerance}/5</Badge>
+          {food.hasCustomPreference && (
+            <Badge variant="default">Preferencia personalizada</Badge>
+          )}
         </div>
+
+        {food.hasCustomPreference && (
+          <section className="rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
+            <p className="font-medium">Valores personalizados</p>
+            <p className="mt-1 leading-6 text-muted-foreground">
+              Este alimento no sigue exactamente los valores base del catalogo para tu
+              usuario.
+            </p>
+          </section>
+        )}
 
         <div>
           <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">
-            <span>Tolerancia personal</span>
+            <span className="inline-flex flex-wrap items-center gap-2">
+              Tolerancia personal
+              {food.customPreferenceFields.tolerance && (
+                <Badge variant="secondary">Personalizada</Badge>
+              )}
+            </span>
             <span>{food.tolerance}/5</span>
           </div>
           <div className="grid grid-cols-5 gap-1">
@@ -87,6 +108,9 @@ export function FoodDetailDialog({
           <div className="mb-2 flex items-center gap-2 font-medium">
             <StickyNote className="size-4 text-muted-foreground" aria-hidden="true" />
             <h3>Notas personales</h3>
+            {food.customPreferenceFields.notes && (
+              <Badge variant="secondary">Personalizadas</Badge>
+            )}
           </div>
           <p className="text-sm leading-6 text-muted-foreground">
             {food.notes ?? "Sin notas personales registradas."}

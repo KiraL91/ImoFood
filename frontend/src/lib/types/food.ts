@@ -10,6 +10,12 @@ export const toleranceSchema = z.union([
   z.literal(5),
 ]);
 
+export const foodCustomPreferenceFieldsSchema = z.object({
+  notes: z.boolean(),
+  status: z.boolean(),
+  tolerance: z.boolean(),
+});
+
 export const foodSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -17,6 +23,8 @@ export const foodSchema = z.object({
   status: foodStatusSchema,
   tolerance: toleranceSchema,
   notes: z.string().optional(),
+  customPreferenceFields: foodCustomPreferenceFieldsSchema,
+  hasCustomPreference: z.boolean(),
   suggestedServing: z.string().optional(),
   tags: z.array(z.string()),
   createdAt: z.string().optional(),

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Loader2, Plus, RotateCcw, Save, Sparkles, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import type {
   SuggestFoodInfoInput,
 } from "@/features/foods/foods-api";
 import type { Food, FoodStatus } from "@/lib/types/food";
+import { cn } from "@/lib/utils/cn";
 
 type FoodFormState = {
   category: string;
@@ -193,6 +195,9 @@ export function FoodFormDialog({
   const disabled = isDisabled || isSubmitting;
   const isEditing = mode === "edit";
   const isPreferenceEdit = isEditing && editScope === "preference";
+  const hasCustomPreference = Boolean(
+    isPreferenceEdit && initialFood?.hasCustomPreference,
+  );
   const catalogFieldsDisabled = disabled || isPreferenceEdit;
   const isDuplicateCheckPending = !isEditing && isCheckingExistingFoods;
   const comparableFoodName = useMemo(
@@ -337,6 +342,28 @@ export function FoodFormDialog({
           </div>
         )}
 
+        {isPreferenceEdit && (
+          <div
+            className={cn(
+              "rounded-md border px-4 py-3 text-sm md:col-span-2 xl:col-span-4",
+              hasCustomPreference
+                ? "border-primary/30 bg-primary/10"
+                : "bg-muted/30 text-muted-foreground",
+            )}
+          >
+            <p className="font-medium">
+              {hasCustomPreference
+                ? "Tienes ajustes personalizados"
+                : "Sigues los valores base del catalogo"}
+            </p>
+            <p className="mt-1 leading-6 text-muted-foreground">
+              {hasCustomPreference
+                ? "Los campos marcados no coinciden con el catalogo base."
+                : "Cambia estado, tolerancia o notas para crear tu preferencia."}
+            </p>
+          </div>
+        )}
+
         <div className="space-y-2 text-sm font-medium">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label htmlFor="food-name">Nombre</label>
@@ -440,7 +467,12 @@ export function FoodFormDialog({
         </label>
 
         <label className="space-y-2 text-sm font-medium">
-          Estado
+          <span className="flex flex-wrap items-center gap-2">
+            Estado
+            {isPreferenceEdit && initialFood?.customPreferenceFields.status && (
+              <Badge variant="secondary">Personalizado</Badge>
+            )}
+          </span>
           <select
             value={formState.status}
             onChange={(event) =>
@@ -460,7 +492,12 @@ export function FoodFormDialog({
         </label>
 
         <label className="space-y-2 text-sm font-medium">
-          Tolerancia
+          <span className="flex flex-wrap items-center gap-2">
+            Tolerancia
+            {isPreferenceEdit && initialFood?.customPreferenceFields.tolerance && (
+              <Badge variant="secondary">Personalizada</Badge>
+            )}
+          </span>
           <select
             value={formState.tolerance}
             onChange={(event) =>
@@ -508,7 +545,12 @@ export function FoodFormDialog({
         </label>
 
         <label className="space-y-2 text-sm font-medium md:col-span-2">
-          Notas
+          <span className="flex flex-wrap items-center gap-2">
+            Notas
+            {isPreferenceEdit && initialFood?.customPreferenceFields.notes && (
+              <Badge variant="secondary">Personalizadas</Badge>
+            )}
+          </span>
           <textarea
             value={formState.notes}
             onChange={(event) =>

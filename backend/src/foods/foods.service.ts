@@ -348,6 +348,12 @@ export class FoodsService {
     return trimmedValue && trimmedValue.length > 0 ? trimmedValue : null;
   }
 
+  private normalizeNullableText(value?: string | null): string | null {
+    const trimmedValue = value?.trim();
+
+    return trimmedValue && trimmedValue.length > 0 ? trimmedValue : null;
+  }
+
   private getPreferenceInclude(userId: string) {
     return {
       preferences: {
@@ -359,14 +365,41 @@ export class FoodsService {
     } satisfies Prisma.FoodInclude;
   }
 
+  private getCustomPreferenceFields(
+    food: PrismaFood,
+    preference?: FoodPreferenceRecord,
+  ): Food["customPreferenceFields"] {
+    if (!preference) {
+      return {
+        notes: false,
+        status: false,
+        tolerance: false,
+      };
+    }
+
+    return {
+      notes:
+        this.normalizeNullableText(preference.notes) !==
+        this.normalizeNullableText(food.notes),
+      status: preference.status !== food.status,
+      tolerance: preference.tolerance !== food.tolerance,
+    };
+  }
+
   private toFood(
     food: PrismaFood & { preferences?: FoodPreferenceRecord[] },
   ): Food {
     const preference = food.preferences?.[0];
+    const customPreferenceFields = this.getCustomPreferenceFields(
+      food,
+      preference,
+    );
 
     return {
       category: food.category,
       createdAt: food.createdAt.toISOString(),
+      customPreferenceFields,
+      hasCustomPreference: Object.values(customPreferenceFields).some(Boolean),
       id: food.id,
       name: food.name,
       notes: preference?.notes ?? food.notes ?? undefined,

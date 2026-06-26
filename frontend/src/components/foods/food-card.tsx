@@ -44,9 +44,12 @@ export function FoodCard({
             <CardTitle>{food.name}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{food.category}</p>
           </div>
-          <Badge variant="outline" className={status.badgeClassName}>
-            {status.label}
-          </Badge>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <Badge variant="outline" className={status.badgeClassName}>
+              {status.label}
+            </Badge>
+            {food.hasCustomPreference && <Badge variant="secondary">Personalizado</Badge>}
+          </div>
         </div>
         {showActions && (
           <div className="flex flex-wrap gap-2">
@@ -102,7 +105,12 @@ export function FoodCard({
       <CardContent className="space-y-3">
         <div>
           <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">
-            <span>Tolerancia</span>
+            <span className="inline-flex flex-wrap items-center gap-2">
+              Tolerancia
+              {food.customPreferenceFields.tolerance && (
+                <Badge variant="secondary">Personalizada</Badge>
+              )}
+            </span>
             <span>{food.tolerance}/5</span>
           </div>
           <div className="grid grid-cols-5 gap-1">

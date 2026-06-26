@@ -143,6 +143,12 @@ test("foods are shared and merged with authenticated user preferences", async ()
   assert.equal(foods[0]?.status, "avoid");
   assert.equal(foods[0]?.tolerance, 1);
   assert.equal(foods[0]?.notes, "No me sienta bien");
+  assert.equal(foods[0]?.hasCustomPreference, true);
+  assert.deepEqual(foods[0]?.customPreferenceFields, {
+    notes: true,
+    status: true,
+    tolerance: true,
+  });
   assert.equal(Object.hasOwn(whereFrom(findManyArgs), "userId"), false);
   assert.equal(findManyPreferenceWhere.userId, userId);
   assert.equal(whereFrom(findUniqueArgs[0]).id, "food-id");
@@ -152,11 +158,18 @@ test("foods are shared and merged with authenticated user preferences", async ()
   assert.equal(updatedFood.status, "testing");
   assert.equal(updatedFood.tolerance, 3);
   assert.equal(updatedFood.notes, "Probando");
+  assert.equal(updatedFood.hasCustomPreference, true);
   assert.equal(deleteManyWhere.foodId, "food-id");
   assert.equal(deleteManyWhere.userId, userId);
   assert.equal(resetFood.status, "allowed");
   assert.equal(resetFood.tolerance, 5);
   assert.equal(resetFood.notes, undefined);
+  assert.equal(resetFood.hasCustomPreference, false);
+  assert.deepEqual(resetFood.customPreferenceFields, {
+    notes: false,
+    status: false,
+    tolerance: false,
+  });
 });
 
 test("recipes are scoped to the authenticated user", async () => {
