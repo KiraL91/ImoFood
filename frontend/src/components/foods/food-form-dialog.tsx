@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Loader2, Plus, Save, Sparkles, X } from "lucide-react";
+import { Loader2, Plus, RotateCcw, Save, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ type FoodFormDialogProps = {
   isCheckingExistingFoods?: boolean;
   isDisabled?: boolean;
   isOpen: boolean;
+  isResettingPreference?: boolean;
   isSuggestingWithAi?: boolean;
   isSubmitting?: boolean;
   editScope?: "catalog" | "preference";
@@ -37,6 +38,7 @@ type FoodFormDialogProps = {
   onSuggestWithAi?: (input: SuggestFoodInfoInput) => Promise<AiFoodInfoSuggestion>;
   onCancel?: () => void;
   onOpenChange: (open: boolean) => void;
+  onResetPreference?: () => Promise<void> | void;
   onViewExistingFood?: (food: Food) => void;
   onSubmit?: (input: CreateFoodInput) => Promise<void> | void;
   suggestionDisabledReason?: string;
@@ -172,6 +174,7 @@ export function FoodFormDialog({
   isCheckingExistingFoods = false,
   isDisabled = false,
   isOpen,
+  isResettingPreference = false,
   isSuggestingWithAi = false,
   isSubmitting = false,
   editScope = "catalog",
@@ -179,6 +182,7 @@ export function FoodFormDialog({
   onSuggestWithAi,
   onCancel,
   onOpenChange,
+  onResetPreference,
   onViewExistingFood,
   onSubmit,
   suggestionDisabledReason,
@@ -232,6 +236,7 @@ export function FoodFormDialog({
     formState.name.trim().length < 2;
   const submitButtonDisabled =
     disabled || isDuplicateCheckPending || hasExactFoodNameDuplicate;
+  const resetPreferenceButtonDisabled = disabled || isResettingPreference;
   const suggestionButtonTitle = isDuplicateCheckPending
     ? "Comprobando alimentos existentes."
     : hasExactFoodNameDuplicate
@@ -242,7 +247,7 @@ export function FoodFormDialog({
           ? "Escribe primero el nombre del alimento."
           : "Rellenar campos con una propuesta de IA.";
   const dialogTitle = isPreferenceEdit
-    ? "Editar preferencia"
+    ? "Editar mi preferencia"
     : isEditing
       ? "Editar alimento"
       : "Nuevo alimento";
@@ -250,7 +255,7 @@ export function FoodFormDialog({
     ? (disabledReason ??
       "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend.")
     : isPreferenceEdit
-      ? "Ajusta tu estado, tolerancia y notas para este alimento."
+      ? "Ajusta como te sienta este alimento sin modificar el catalogo."
       : "Guarda alimentos y raciones sugeridas en la base de conocimiento.";
 
   useEffect(() => {
@@ -308,6 +313,14 @@ export function FoodFormDialog({
     } catch (error) {
       setSuggestionError(getErrorMessage(error));
     }
+  }
+
+  async function handleResetPreference() {
+    if (!onResetPreference || resetPreferenceButtonDisabled) {
+      return;
+    }
+
+    await onResetPreference();
   }
 
   return (
@@ -512,10 +525,27 @@ export function FoodFormDialog({
             {isEditing ? <Save aria-hidden="true" /> : <Plus aria-hidden="true" />}
             {isSubmitting
               ? "Guardando..."
-              : isEditing
-                ? "Guardar cambios"
-                : "Guardar alimento"}
+              : isPreferenceEdit
+                ? "Guardar preferencia"
+                : isEditing
+                  ? "Guardar cambios"
+                  : "Guardar alimento"}
           </Button>
+          {isPreferenceEdit && onResetPreference && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleResetPreference}
+              disabled={resetPreferenceButtonDisabled}
+            >
+              {isResettingPreference ? (
+                <Loader2 className="animate-spin" aria-hidden="true" />
+              ) : (
+                <RotateCcw aria-hidden="true" />
+              )}
+              {isResettingPreference ? "Restaurando..." : "Usar catalogo"}
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"

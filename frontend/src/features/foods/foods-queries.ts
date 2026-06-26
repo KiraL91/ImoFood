@@ -5,6 +5,7 @@ import {
   createFood,
   deleteFood,
   getFoods,
+  resetFoodPreference,
   suggestFoodInfo,
   updateFood,
   updateFoodPreference,
@@ -54,6 +55,18 @@ export function useUpdateFoodPreference() {
 
   return useMutation({
     mutationFn: updateFoodPreference,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: foodQueryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: mealLogQueryKeys.all });
+    },
+  });
+}
+
+export function useResetFoodPreference() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: resetFoodPreference,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: foodQueryKeys.all });
       await queryClient.invalidateQueries({ queryKey: mealLogQueryKeys.all });

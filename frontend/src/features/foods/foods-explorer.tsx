@@ -13,6 +13,7 @@ import {
   useCreateFood,
   useDeleteFood,
   useFoods,
+  useResetFoodPreference,
   useSuggestFoodInfo,
   useUpdateFood,
   useUpdateFoodPreference,
@@ -54,6 +55,7 @@ export function FoodsExplorer() {
   const createFoodMutation = useCreateFood();
   const updateFoodMutation = useUpdateFood();
   const updateFoodPreferenceMutation = useUpdateFoodPreference();
+  const resetFoodPreferenceMutation = useResetFoodPreference();
   const deleteFoodMutation = useDeleteFood();
   const suggestFoodInfoMutation = useSuggestFoodInfo();
   const foods = useMemo(
@@ -63,7 +65,11 @@ export function FoodsExplorer() {
   const isSubmitting =
     createFoodMutation.isPending ||
     updateFoodMutation.isPending ||
-    updateFoodPreferenceMutation.isPending;
+    updateFoodPreferenceMutation.isPending ||
+    resetFoodPreferenceMutation.isPending;
+  const isEditingPreference = Boolean(
+    editingFood && !canUpdateCatalogFood && canUpdateFoodPreference,
+  );
   const isFormDisabled =
     !hasBackendConfigured ||
     !isAuthenticated ||
@@ -189,6 +195,30 @@ export function FoodsExplorer() {
     }
   }
 
+  async function handleResetFoodPreference() {
+    if (!editingFood) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Restaurar tu preferencia de "${editingFood.name}" a los valores del catalogo?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setMutationError(null);
+
+    try {
+      await resetFoodPreferenceMutation.mutateAsync(editingFood.id);
+      setEditingFood(undefined);
+      setIsFoodDialogOpen(false);
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
+    }
+  }
+
   function handleRegisterMeal(food: Food) {
     router.push(`/meal-logs?foodId=${food.id}`);
   }
@@ -215,10 +245,11 @@ export function FoodsExplorer() {
         isCheckingExistingFoods={foodsQuery.isLoading}
         isDisabled={isFormDisabled}
         isOpen={isFoodDialogOpen}
+        isResettingPreference={resetFoodPreferenceMutation.isPending}
         isSuggestingWithAi={suggestFoodInfoMutation.isPending}
         isSubmitting={isSubmitting}
         mode={editingFood ? "edit" : "create"}
-        editScope={editingFood && !canUpdateCatalogFood ? "preference" : "catalog"}
+        editScope={isEditingPreference ? "preference" : "catalog"}
         onSuggestWithAi={
           canSuggestFoodWithAi ? suggestFoodInfoMutation.mutateAsync : undefined
         }
@@ -227,6 +258,7 @@ export function FoodsExplorer() {
           setMutationError(null);
         }}
         onOpenChange={handleFoodDialogOpenChange}
+        onResetPreference={isEditingPreference ? handleResetFoodPreference : undefined}
         onViewExistingFood={handleViewExistingFood}
         onSubmit={handleFoodSubmit}
         suggestionDisabledReason={
@@ -347,6 +379,7 @@ export function FoodsExplorer() {
             canDelete={hasBackendConfigured && isAuthenticated && canDeleteFood}
             canEdit={hasBackendConfigured && isAuthenticated && canUpdateFood}
             canRegisterMeal={canRegisterMealLog}
+            editLabel={canUpdateCatalogFood ? "Editar" : "Editar mi preferencia"}
             food={food}
             isDeleting={
               deleteFoodMutation.isPending && deleteFoodMutation.variables === food.id

@@ -288,6 +288,30 @@ export class FoodsService {
     return this.toFood(updatedFood);
   }
 
+  async resetPreference(id: string, userId: string): Promise<Food> {
+    const food = await this.prisma.food.findUnique({
+      select: {
+        id: true,
+      },
+      where: {
+        id,
+      },
+    });
+
+    if (!food) {
+      throw new NotFoundException(`Food with id "${id}" was not found.`);
+    }
+
+    await this.prisma.foodPreference.deleteMany({
+      where: {
+        foodId: id,
+        userId,
+      },
+    });
+
+    return this.findOne(id, userId);
+  }
+
   async remove(id: string, userId: string): Promise<void> {
     await this.findOne(id, userId);
 

@@ -95,6 +95,18 @@ export class FoodsController {
     );
   }
 
+  @Delete(":id/preference")
+  @Permissions("food-preferences:update")
+  resetPreference(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+  ): Promise<Food> {
+    return this.foodsService.resetPreference(
+      id,
+      this.getRequestUserId(request),
+    );
+  }
+
   @Delete(":id")
   @Permissions("foods:delete")
   @HttpCode(HttpStatus.NO_CONTENT)

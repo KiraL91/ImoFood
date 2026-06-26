@@ -61,8 +61,9 @@ function createFoodRecord(overrides: Record<string, unknown> = {}) {
 }
 
 test("foods are shared and merged with authenticated user preferences", async () => {
+  let deleteManyArgs: unknown;
   let findManyArgs: unknown;
-  let findUniqueArgs: unknown;
+  const findUniqueArgs: unknown[] = [];
   let findUniqueOrThrowArgs: unknown;
   let upsertArgs: unknown;
   const prisma = {
@@ -83,7 +84,7 @@ test("foods are shared and merged with authenticated user preferences", async ()
         ];
       },
       findUnique: async (args: unknown) => {
-        findUniqueArgs = args;
+        findUniqueArgs.push(args);
 
         return createFoodRecord();
       },
@@ -102,6 +103,9 @@ test("foods are shared and merged with authenticated user preferences", async ()
       },
     },
     foodPreference: {
+      deleteMany: async (args: unknown) => {
+        deleteManyArgs = args;
+      },
       upsert: async (args: unknown) => {
         upsertArgs = args;
       },
@@ -119,11 +123,13 @@ test("foods are shared and merged with authenticated user preferences", async ()
     },
     userId,
   );
+  const resetFood = await service.resetPreference("food-id", userId);
   const findManyInclude = asRecord(asRecord(findManyArgs).include);
   const findManyPreferences = asRecord(findManyInclude.preferences);
   const findManyPreferenceWhere = asRecord(findManyPreferences.where);
   const preferenceWhere = asRecord(asRecord(upsertArgs).where);
   const preferenceId = asRecord(preferenceWhere.userId_foodId);
+  const deleteManyWhere = whereFrom(deleteManyArgs);
   const findUniqueOrThrowInclude = asRecord(
     asRecord(findUniqueOrThrowArgs).include,
   );
@@ -139,13 +145,18 @@ test("foods are shared and merged with authenticated user preferences", async ()
   assert.equal(foods[0]?.notes, "No me sienta bien");
   assert.equal(Object.hasOwn(whereFrom(findManyArgs), "userId"), false);
   assert.equal(findManyPreferenceWhere.userId, userId);
-  assert.equal(whereFrom(findUniqueArgs).id, "food-id");
+  assert.equal(whereFrom(findUniqueArgs[0]).id, "food-id");
   assert.equal(preferenceId.foodId, "food-id");
   assert.equal(preferenceId.userId, userId);
   assert.equal(findUniqueOrThrowPreferenceWhere.userId, userId);
   assert.equal(updatedFood.status, "testing");
   assert.equal(updatedFood.tolerance, 3);
   assert.equal(updatedFood.notes, "Probando");
+  assert.equal(deleteManyWhere.foodId, "food-id");
+  assert.equal(deleteManyWhere.userId, userId);
+  assert.equal(resetFood.status, "allowed");
+  assert.equal(resetFood.tolerance, 5);
+  assert.equal(resetFood.notes, undefined);
 });
 
 test("recipes are scoped to the authenticated user", async () => {

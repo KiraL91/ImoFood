@@ -115,6 +115,14 @@ export async function updateFoodPreference({
   return foodSchema.parse(data);
 }
 
+export async function resetFoodPreference(id: string): Promise<Food> {
+  const data = await apiClient<unknown>(`/foods/${id}/preference`, {
+    method: "DELETE",
+  });
+
+  return foodSchema.parse(data);
+}
+
 export async function deleteFood(id: string): Promise<void> {
   await apiClient<void>(`/foods/${id}`, {
     method: "DELETE",

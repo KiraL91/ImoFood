@@ -79,6 +79,7 @@ Important feature files:
 - Foods cards are compact; full details are in `FoodDetailDialog`.
 - Foods are a shared catalog even though the API contract does not expose ownership.
 - Owner can create/update/delete catalog foods; member can update only their food status/tolerance/notes preference.
+- Member food editing should say "mi preferencia" and may reset that preference back to catalog defaults.
 - Recipe cards show prep time, ingredient count, rating, ingredients and accessible steps.
 - Recipes are personal per authenticated user even though the API contract does not expose `userId`.
 - Meal ideas support:

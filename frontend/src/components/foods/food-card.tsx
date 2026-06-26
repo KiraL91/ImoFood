@@ -10,6 +10,7 @@ type FoodCardProps = {
   canDelete?: boolean;
   canEdit?: boolean;
   canRegisterMeal?: boolean;
+  editLabel?: string;
   food: Food;
   isDeleting?: boolean;
   onDelete?: (food: Food) => void;
@@ -22,6 +23,7 @@ export function FoodCard({
   canDelete = false,
   canEdit = false,
   canRegisterMeal = false,
+  editLabel = "Editar",
   food,
   isDeleting = false,
   onDelete,
@@ -75,10 +77,11 @@ export function FoodCard({
                 type="button"
                 variant="outline"
                 size="sm"
+                title={editLabel}
                 onClick={() => onEdit?.(food)}
               >
                 <Pencil aria-hidden="true" />
-                Editar
+                {editLabel}
               </Button>
             )}
             {canDelete && (

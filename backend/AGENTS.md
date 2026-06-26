@@ -56,6 +56,7 @@ Foods:
 - Catalog create/update/delete is owner-only through `foods:*` permissions.
 - User-specific status/tolerance/notes live in `FoodPreference`.
 - Merge the authenticated user's `FoodPreference` over catalog defaults before returning foods.
+- `DELETE /foods/:id/preference` resets only the authenticated user's preference to catalog defaults.
 
 Recipes:
 
