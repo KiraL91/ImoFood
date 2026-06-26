@@ -23,13 +23,18 @@ import {
 export class TreatmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filters: TreatmentFilters = {}): Promise<Treatment[]> {
+  async findAll(
+    userId: string,
+    filters: TreatmentFilters = {},
+  ): Promise<Treatment[]> {
     this.assertValidCategory(filters.category);
     this.assertValidStatus(filters.status);
     this.assertValidTarget(filters.target);
 
     const search = filters.search?.trim().toLowerCase();
-    const where: Prisma.TreatmentWhereInput = {};
+    const where: Prisma.TreatmentWhereInput = {
+      userId,
+    };
 
     if (filters.category) {
       where.category = filters.category;
@@ -82,10 +87,11 @@ export class TreatmentsService {
     return treatments.map((treatment) => this.toTreatment(treatment));
   }
 
-  async findOne(id: string): Promise<Treatment> {
-    const treatment = await this.prisma.treatment.findUnique({
+  async findOne(id: string, userId: string): Promise<Treatment> {
+    const treatment = await this.prisma.treatment.findFirst({
       where: {
         id,
+        userId,
       },
     });
 
@@ -96,7 +102,10 @@ export class TreatmentsService {
     return this.toTreatment(treatment);
   }
 
-  async create(createTreatmentDto: CreateTreatmentDto): Promise<Treatment> {
+  async create(
+    createTreatmentDto: CreateTreatmentDto,
+    userId: string,
+  ): Promise<Treatment> {
     const treatment = await this.prisma.treatment.create({
       data: {
         category: createTreatmentDto.category,
@@ -107,6 +116,11 @@ export class TreatmentsService {
           this.toOptionalDate(createTreatmentDto.startDate) ?? undefined,
         status: createTreatmentDto.status,
         targets: this.normalizeTargets(createTreatmentDto.targets),
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
       },
     });
 
@@ -116,8 +130,9 @@ export class TreatmentsService {
   async update(
     id: string,
     updateTreatmentDto: UpdateTreatmentDto,
+    userId: string,
   ): Promise<Treatment> {
-    await this.findOne(id);
+    await this.findOne(id, userId);
 
     const data: Prisma.TreatmentUpdateInput = {
       category: updateTreatmentDto.category,
@@ -141,8 +156,8 @@ export class TreatmentsService {
     return this.toTreatment(treatment);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(id: string, userId: string): Promise<void> {
+    await this.findOne(id, userId);
 
     await this.prisma.treatment.delete({
       where: {

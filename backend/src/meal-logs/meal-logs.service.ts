@@ -38,22 +38,26 @@ type PrismaMealLogWithRelations = Prisma.MealLogGetPayload<{
 export class MealLogsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<MealLog[]> {
+  async findAll(userId: string): Promise<MealLog[]> {
     const mealLogs = await this.prisma.mealLog.findMany({
       include: mealLogInclude,
       orderBy: {
         consumedAt: "desc",
+      },
+      where: {
+        userId,
       },
     });
 
     return mealLogs.map((mealLog) => this.toMealLog(mealLog));
   }
 
-  async findOne(id: string): Promise<MealLog> {
-    const mealLog = await this.prisma.mealLog.findUnique({
+  async findOne(id: string, userId: string): Promise<MealLog> {
+    const mealLog = await this.prisma.mealLog.findFirst({
       include: mealLogInclude,
       where: {
         id,
+        userId,
       },
     });
 
@@ -64,7 +68,10 @@ export class MealLogsService {
     return this.toMealLog(mealLog);
   }
 
-  async create(createMealLogDto: CreateMealLogDto): Promise<MealLog> {
+  async create(
+    createMealLogDto: CreateMealLogDto,
+    userId: string,
+  ): Promise<MealLog> {
     const recipeId = this.normalizeRecipeId(createMealLogDto.recipeId);
     const foodIds = this.normalizeFoodIds(createMealLogDto.foodIds) ?? [];
 
@@ -98,6 +105,11 @@ export class MealLogsService {
               },
             }
           : undefined,
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
       },
       include: mealLogInclude,
     });
@@ -108,8 +120,9 @@ export class MealLogsService {
   async update(
     id: string,
     updateMealLogDto: UpdateMealLogDto,
+    userId: string,
   ): Promise<MealLog> {
-    await this.findOne(id);
+    await this.findOne(id, userId);
 
     const recipeId = this.normalizeRecipeId(updateMealLogDto.recipeId);
     const foodIds = this.normalizeFoodIds(updateMealLogDto.foodIds);
@@ -181,8 +194,8 @@ export class MealLogsService {
     return this.toMealLog(updatedMealLog);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(id: string, userId: string): Promise<void> {
+    await this.findOne(id, userId);
 
     await this.prisma.mealLog.delete({
       where: {

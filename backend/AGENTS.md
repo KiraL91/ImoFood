@@ -62,16 +62,20 @@ Meal logs:
 
 - CRUD under `/meal-logs`.
 - Can link recipes and concrete foods.
+- Personal per authenticated user; always scope read/update/delete by `userId`.
 
 Symptom logs:
 
 - CRUD under `/symptom-logs`.
 - Can link to meal logs.
+- Personal per authenticated user; linked meal logs must belong to the same user.
 
 Treatments:
 
 - CRUD under `/treatments`.
 - Treatment logs under treatment log controller/service.
+- Treatments and treatment logs are personal per authenticated user.
+- Treatment log linked treatment, meal log, and symptom log records must belong to the same user.
 
 AI:
 

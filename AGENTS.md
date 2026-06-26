@@ -27,6 +27,11 @@ Core domains already present:
 - Dashboard: "Hoy" daily view with follow-up actions.
 - Settings: own profile, owner-only user administration and future integrations.
 
+Data ownership:
+
+- Meal logs, symptom logs, treatments, and treatment logs are personal per authenticated user.
+- Foods and recipes are still shared catalogs unless explicitly changed later.
+
 ## Stack
 
 - Frontend: Next.js 15 App Router, React 19, TypeScript, Tailwind CSS, shadcn-style local UI, TanStack Query, Zod, Lucide.

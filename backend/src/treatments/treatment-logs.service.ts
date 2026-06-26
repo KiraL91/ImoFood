@@ -18,8 +18,13 @@ import {
 export class TreatmentLogsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filters: TreatmentLogFilters = {}): Promise<TreatmentLog[]> {
-    const where: Prisma.TreatmentLogWhereInput = {};
+  async findAll(
+    userId: string,
+    filters: TreatmentLogFilters = {},
+  ): Promise<TreatmentLog[]> {
+    const where: Prisma.TreatmentLogWhereInput = {
+      userId,
+    };
 
     const treatmentId = this.normalizeOptionalIdFilter(filters.treatmentId);
     const relatedMealLogId = this.normalizeOptionalIdFilter(
@@ -53,10 +58,11 @@ export class TreatmentLogsService {
     );
   }
 
-  async findOne(id: string): Promise<TreatmentLog> {
-    const treatmentLog = await this.prisma.treatmentLog.findUnique({
+  async findOne(id: string, userId: string): Promise<TreatmentLog> {
+    const treatmentLog = await this.prisma.treatmentLog.findFirst({
       where: {
         id,
+        userId,
       },
     });
 
@@ -71,6 +77,7 @@ export class TreatmentLogsService {
 
   async create(
     createTreatmentLogDto: CreateTreatmentLogDto,
+    userId: string,
   ): Promise<TreatmentLog> {
     const treatmentId = this.normalizeRequiredId(
       createTreatmentLogDto.treatmentId,
@@ -83,9 +90,9 @@ export class TreatmentLogsService {
       createTreatmentLogDto.relatedSymptomLogId,
     );
 
-    await this.ensureTreatmentExists(treatmentId);
-    await this.ensureOptionalMealLogExists(relatedMealLogId);
-    await this.ensureOptionalSymptomLogExists(relatedSymptomLogId);
+    await this.ensureTreatmentExists(treatmentId, userId);
+    await this.ensureOptionalMealLogExists(relatedMealLogId, userId);
+    await this.ensureOptionalSymptomLogExists(relatedSymptomLogId, userId);
 
     const treatmentLog = await this.prisma.treatmentLog.create({
       data: {
@@ -112,6 +119,11 @@ export class TreatmentLogsService {
             id: treatmentId,
           },
         },
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
       },
     });
 
@@ -121,8 +133,9 @@ export class TreatmentLogsService {
   async update(
     id: string,
     updateTreatmentLogDto: UpdateTreatmentLogDto,
+    userId: string,
   ): Promise<TreatmentLog> {
-    await this.findOne(id);
+    await this.findOne(id, userId);
 
     const treatmentId = this.normalizeOptionalRequiredId(
       updateTreatmentLogDto.treatmentId,
@@ -136,11 +149,11 @@ export class TreatmentLogsService {
     );
 
     if (treatmentId) {
-      await this.ensureTreatmentExists(treatmentId);
+      await this.ensureTreatmentExists(treatmentId, userId);
     }
 
-    await this.ensureOptionalMealLogExists(relatedMealLogId);
-    await this.ensureOptionalSymptomLogExists(relatedSymptomLogId);
+    await this.ensureOptionalMealLogExists(relatedMealLogId, userId);
+    await this.ensureOptionalSymptomLogExists(relatedSymptomLogId, userId);
 
     const data: Prisma.TreatmentLogUpdateInput = {
       dose: this.normalizeOptionalString(updateTreatmentLogDto.dose),
@@ -170,8 +183,8 @@ export class TreatmentLogsService {
     return this.toTreatmentLog(updatedTreatmentLog);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(id: string, userId: string): Promise<void> {
+    await this.findOne(id, userId);
 
     await this.prisma.treatmentLog.delete({
       where: {
@@ -255,13 +268,17 @@ export class TreatmentLogsService {
         };
   }
 
-  private async ensureTreatmentExists(treatmentId: string): Promise<void> {
-    const treatment = await this.prisma.treatment.findUnique({
+  private async ensureTreatmentExists(
+    treatmentId: string,
+    userId: string,
+  ): Promise<void> {
+    const treatment = await this.prisma.treatment.findFirst({
       select: {
         id: true,
       },
       where: {
         id: treatmentId,
+        userId,
       },
     });
 
@@ -274,17 +291,19 @@ export class TreatmentLogsService {
 
   private async ensureOptionalMealLogExists(
     mealLogId: string | null | undefined,
+    userId: string,
   ): Promise<void> {
     if (!mealLogId) {
       return;
     }
 
-    const mealLog = await this.prisma.mealLog.findUnique({
+    const mealLog = await this.prisma.mealLog.findFirst({
       select: {
         id: true,
       },
       where: {
         id: mealLogId,
+        userId,
       },
     });
 
@@ -297,17 +316,19 @@ export class TreatmentLogsService {
 
   private async ensureOptionalSymptomLogExists(
     symptomLogId: string | null | undefined,
+    userId: string,
   ): Promise<void> {
     if (!symptomLogId) {
       return;
     }
 
-    const symptomLog = await this.prisma.symptomLog.findUnique({
+    const symptomLog = await this.prisma.symptomLog.findFirst({
       select: {
         id: true,
       },
       where: {
         id: symptomLogId,
+        userId,
       },
     });
 

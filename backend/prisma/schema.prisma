@@ -22,24 +22,24 @@ enum UserRole {
 }
 
 model Food {
-  id        String     @id @default(cuid())
-  name      String
-  category  String
-  status    FoodStatus
-  tolerance Int
-  notes     String?
+  id               String        @id @default(cuid())
+  name             String
+  category         String
+  status           FoodStatus
+  tolerance        Int
+  notes            String?
   suggestedServing String?
-  tags      String[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  mealLogs  MealLogFood[]
+  tags             String[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  mealLogs         MealLogFood[]
 
   @@index([category])
   @@index([status])
 }
 
 model Recipe {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   name            String
   description     String?
   ingredients     String[]
@@ -47,8 +47,8 @@ model Recipe {
   tags            String[]
   prepTimeMinutes Int
   rating          Int?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   mealLogs        MealLog[]
 
   @@index([name])
@@ -56,18 +56,21 @@ model Recipe {
 }
 
 model MealLog {
-  id          String   @id @default(cuid())
-  consumedAt  DateTime
-  description String
-  notes       String?
-  recipeId    String?
-  recipe      Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  symptomLogs SymptomLog[]
-  foods       MealLogFood[]
+  id            String         @id @default(cuid())
+  userId        String
+  user          AppUser        @relation(fields: [userId], references: [id])
+  consumedAt    DateTime
+  description   String
+  notes         String?
+  recipeId      String?
+  recipe        Recipe?        @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  symptomLogs   SymptomLog[]
+  foods         MealLogFood[]
   treatmentLogs TreatmentLog[]
 
+  @@index([userId, consumedAt])
   @@index([consumedAt])
   @@index([recipeId])
 }
@@ -84,27 +87,32 @@ model MealLogFood {
 }
 
 model SymptomLog {
-  id        String   @id @default(cuid())
-  loggedAt  DateTime
-  bloating  Int
-  pain      Int
-  gas       Int
-  transit   Int
-  energy    Int
-  sleep     Int
-  notes     String?
-  mealLogId String?
-  mealLog   MealLog? @relation(fields: [mealLogId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String         @id @default(cuid())
+  userId        String
+  user          AppUser        @relation(fields: [userId], references: [id])
+  loggedAt      DateTime
+  bloating      Int
+  pain          Int
+  gas           Int
+  transit       Int
+  energy        Int
+  sleep         Int
+  notes         String?
+  mealLogId     String?
+  mealLog       MealLog?       @relation(fields: [mealLogId], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   treatmentLogs TreatmentLog[]
 
+  @@index([userId, loggedAt])
   @@index([loggedAt])
   @@index([mealLogId])
 }
 
 model Treatment {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
+  userId    String
+  user      AppUser        @relation(fields: [userId], references: [id])
   name      String
   category  String
   targets   String[]
@@ -112,16 +120,20 @@ model Treatment {
   startDate DateTime?
   endDate   DateTime?
   notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   logs      TreatmentLog[]
 
+  @@index([userId, category])
+  @@index([userId, status])
   @@index([category])
   @@index([status])
 }
 
 model TreatmentLog {
   id                  String      @id @default(cuid())
+  userId              String
+  user                AppUser     @relation(fields: [userId], references: [id])
   treatmentId         String
   treatment           Treatment   @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
   takenAt             DateTime
@@ -135,6 +147,7 @@ model TreatmentLog {
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
+  @@index([userId, takenAt])
   @@index([takenAt])
   @@index([treatmentId])
   @@index([relatedMealLogId])
@@ -142,21 +155,25 @@ model TreatmentLog {
 }
 
 model AppUser {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  email        String?  @unique
-  displayName  String?
-  role         UserRole @default(member)
-  active       Boolean  @default(true)
-  passwordHash String
-  lastDisabledAt DateTime?
-  lastDisabledByUserId String?
-  lastEnabledAt DateTime?
-  lastEnabledByUserId String?
-  passwordResetAt DateTime?
+  id                    String         @id @default(cuid())
+  username              String         @unique
+  email                 String?        @unique
+  displayName           String?
+  role                  UserRole       @default(member)
+  active                Boolean        @default(true)
+  passwordHash          String
+  mealLogs              MealLog[]
+  symptomLogs           SymptomLog[]
+  treatments            Treatment[]
+  treatmentLogs         TreatmentLog[]
+  lastDisabledAt        DateTime?
+  lastDisabledByUserId  String?
+  lastEnabledAt         DateTime?
+  lastEnabledByUserId   String?
+  passwordResetAt       DateTime?
   passwordResetByUserId String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   @@index([role])
   @@index([active])

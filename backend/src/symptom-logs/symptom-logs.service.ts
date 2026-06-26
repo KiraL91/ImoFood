@@ -28,22 +28,26 @@ type PrismaSymptomLogWithMealLog = PrismaSymptomLog & {
 export class SymptomLogsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<SymptomLog[]> {
+  async findAll(userId: string): Promise<SymptomLog[]> {
     const symptomLogs = await this.prisma.symptomLog.findMany({
       include: symptomLogInclude,
       orderBy: {
         loggedAt: "desc",
+      },
+      where: {
+        userId,
       },
     });
 
     return symptomLogs.map((symptomLog) => this.toSymptomLog(symptomLog));
   }
 
-  async findOne(id: string): Promise<SymptomLog> {
-    const symptomLog = await this.prisma.symptomLog.findUnique({
+  async findOne(id: string, userId: string): Promise<SymptomLog> {
+    const symptomLog = await this.prisma.symptomLog.findFirst({
       include: symptomLogInclude,
       where: {
         id,
+        userId,
       },
     });
 
@@ -54,11 +58,14 @@ export class SymptomLogsService {
     return this.toSymptomLog(symptomLog);
   }
 
-  async create(createSymptomLogDto: CreateSymptomLogDto): Promise<SymptomLog> {
+  async create(
+    createSymptomLogDto: CreateSymptomLogDto,
+    userId: string,
+  ): Promise<SymptomLog> {
     const mealLogId = this.normalizeMealLogId(createSymptomLogDto.mealLogId);
 
     if (mealLogId) {
-      await this.ensureMealLogExists(mealLogId);
+      await this.ensureMealLogExists(mealLogId, userId);
     }
 
     const symptomLog = await this.prisma.symptomLog.create({
@@ -78,6 +85,11 @@ export class SymptomLogsService {
         pain: createSymptomLogDto.pain,
         sleep: createSymptomLogDto.sleep,
         transit: createSymptomLogDto.transit,
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
       },
       include: symptomLogInclude,
     });
@@ -88,13 +100,14 @@ export class SymptomLogsService {
   async update(
     id: string,
     updateSymptomLogDto: UpdateSymptomLogDto,
+    userId: string,
   ): Promise<SymptomLog> {
-    await this.findOne(id);
+    await this.findOne(id, userId);
 
     const mealLogId = this.normalizeMealLogId(updateSymptomLogDto.mealLogId);
 
     if (mealLogId) {
-      await this.ensureMealLogExists(mealLogId);
+      await this.ensureMealLogExists(mealLogId, userId);
     }
 
     const data: Prisma.SymptomLogUpdateInput = {
@@ -133,8 +146,8 @@ export class SymptomLogsService {
     return this.toSymptomLog(updatedSymptomLog);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(id: string, userId: string): Promise<void> {
+    await this.findOne(id, userId);
 
     await this.prisma.symptomLog.delete({
       where: {
@@ -169,13 +182,17 @@ export class SymptomLogsService {
       : null;
   }
 
-  private async ensureMealLogExists(mealLogId: string): Promise<void> {
-    const mealLog = await this.prisma.mealLog.findUnique({
+  private async ensureMealLogExists(
+    mealLogId: string,
+    userId: string,
+  ): Promise<void> {
+    const mealLog = await this.prisma.mealLog.findFirst({
       select: {
         id: true,
       },
       where: {
         id: mealLogId,
+        userId,
       },
     });
 
