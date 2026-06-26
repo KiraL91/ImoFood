@@ -1,8 +1,17 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from "@nestjs/common";
 
 import { AuthGuard } from "../auth/auth.guard";
 import { Permissions } from "../auth/permissions.decorator";
 import { PermissionsGuard } from "../auth/permissions.guard";
+import type { AuthenticatedRequest } from "../auth/types/authenticated-user";
 import { AiSuggestionsService } from "./ai-suggestions.service";
 import { CreateFoodInfoSuggestionDto } from "./dto/create-food-info-suggestion.dto";
 import { CreateMealIdeasSuggestionDto } from "./dto/create-meal-ideas-suggestion.dto";
@@ -26,10 +35,12 @@ export class AiSuggestionsController {
   @Post("suggestions/meal-ideas")
   @Permissions("ai-suggestions:create")
   generateMealIdeas(
+    @Req() request: AuthenticatedRequest,
     @Body() createMealIdeasSuggestionDto: CreateMealIdeasSuggestionDto,
   ): Promise<AiMealIdeasSuggestionResult> {
     return this.aiSuggestionsService.generateMealIdeas(
       createMealIdeasSuggestionDto,
+      this.getRequestUserId(request),
     );
   }
 
@@ -41,5 +52,13 @@ export class AiSuggestionsController {
     return this.aiSuggestionsService.generateFoodInfo(
       createFoodInfoSuggestionDto,
     );
+  }
+
+  private getRequestUserId(request: AuthenticatedRequest): string {
+    if (!request.user) {
+      throw new UnauthorizedException("Authenticated user was not found.");
+    }
+
+    return request.user.id;
   }
 }

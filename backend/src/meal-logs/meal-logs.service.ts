@@ -76,7 +76,7 @@ export class MealLogsService {
     const foodIds = this.normalizeFoodIds(createMealLogDto.foodIds) ?? [];
 
     if (recipeId) {
-      await this.ensureRecipeExists(recipeId);
+      await this.ensureRecipeExists(recipeId, userId);
     }
 
     await this.ensureFoodsExist(foodIds);
@@ -128,7 +128,7 @@ export class MealLogsService {
     const foodIds = this.normalizeFoodIds(updateMealLogDto.foodIds);
 
     if (recipeId) {
-      await this.ensureRecipeExists(recipeId);
+      await this.ensureRecipeExists(recipeId, userId);
     }
 
     if (foodIds !== undefined) {
@@ -232,13 +232,17 @@ export class MealLogsService {
     );
   }
 
-  private async ensureRecipeExists(recipeId: string): Promise<void> {
-    const recipe = await this.prisma.recipe.findUnique({
+  private async ensureRecipeExists(
+    recipeId: string,
+    userId: string,
+  ): Promise<void> {
+    const recipe = await this.prisma.recipe.findFirst({
       select: {
         id: true,
       },
       where: {
         id: recipeId,
+        userId,
       },
     });
 

@@ -29,8 +29,8 @@ Core domains already present:
 
 Data ownership:
 
-- Meal logs, symptom logs, treatments, and treatment logs are personal per authenticated user.
-- Foods and recipes are still shared catalogs unless explicitly changed later.
+- Recipes, meal logs, symptom logs, treatments, and treatment logs are personal per authenticated user.
+- Foods are still a shared catalog unless explicitly changed later.
 
 ## Stack
 

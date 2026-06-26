@@ -78,6 +78,7 @@ Important feature files:
 - Dashboard is a daily "Hoy" overview with direct actions.
 - Foods cards are compact; full details are in `FoodDetailDialog`.
 - Recipe cards show prep time, ingredient count, rating, ingredients and accessible steps.
+- Recipes are personal per authenticated user even though the API contract does not expose `userId`.
 - Meal ideas support:
   - local non-AI suggestions.
   - AI suggestions with selected food IDs.

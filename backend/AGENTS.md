@@ -57,11 +57,13 @@ Recipes:
 
 - CRUD under `/recipes`.
 - Includes ingredients, steps, tags, prep time, rating.
+- Personal per authenticated user; always scope read/update/delete by `userId`.
 
 Meal logs:
 
 - CRUD under `/meal-logs`.
 - Can link recipes and concrete foods.
+- Linked recipes must belong to the same user; foods remain shared catalog records.
 - Personal per authenticated user; always scope read/update/delete by `userId`.
 
 Symptom logs:
@@ -83,6 +85,7 @@ AI:
 - `POST /ai/suggestions/meal-ideas`
 - `POST /ai/suggestions/food-info`
 - Protected by auth and `ai-suggestions:*` permissions.
+- Meal ideas may read shared foods, but recipe context must be scoped to the authenticated user.
 
 Users:
 

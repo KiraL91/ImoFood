@@ -91,8 +91,10 @@ export class AiSuggestionsService {
 
   async generateMealIdeas(
     createMealIdeasSuggestionDto: CreateMealIdeasSuggestionDto,
+    userId: string,
   ): Promise<AiMealIdeasSuggestionResult> {
     const context = await this.getMealIdeasContext(
+      userId,
       createMealIdeasSuggestionDto.foodIds,
     );
     const summary = this.getContextSummary(context);
@@ -151,6 +153,7 @@ export class AiSuggestionsService {
   }
 
   private async getMealIdeasContext(
+    userId: string,
     foodIds?: string[],
   ): Promise<MealIdeasContext> {
     const selectedFoodIds = this.normalizeFoodIds(foodIds);
@@ -241,6 +244,7 @@ export class AiSuggestionsService {
             rating: {
               gte: 4,
             },
+            userId,
           },
         }),
       ]);

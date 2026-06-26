@@ -40,6 +40,8 @@ model Food {
 
 model Recipe {
   id              String    @id @default(cuid())
+  userId          String
+  user            AppUser   @relation(fields: [userId], references: [id])
   name            String
   description     String?
   ingredients     String[]
@@ -51,6 +53,8 @@ model Recipe {
   updatedAt       DateTime  @updatedAt
   mealLogs        MealLog[]
 
+  @@index([userId, name])
+  @@index([userId, rating])
   @@index([name])
   @@index([rating])
 }
@@ -162,6 +166,7 @@ model AppUser {
   role                  UserRole       @default(member)
   active                Boolean        @default(true)
   passwordHash          String
+  recipes               Recipe[]
   mealLogs              MealLog[]
   symptomLogs           SymptomLog[]
   treatments            Treatment[]

@@ -14,12 +14,17 @@ import type { Recipe, RecipeFilters, RecipeRatingValue } from "./types/recipe";
 export class RecipesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filters: RecipeFilters = {}): Promise<Recipe[]> {
+  async findAll(
+    userId: string,
+    filters: RecipeFilters = {},
+  ): Promise<Recipe[]> {
     const search = filters.search?.trim().toLowerCase();
     const ingredient = filters.ingredient?.trim();
     const tag = filters.tag?.trim().toLowerCase();
     const minRating = this.parseMinRating(filters.minRating);
-    const where: Prisma.RecipeWhereInput = {};
+    const where: Prisma.RecipeWhereInput = {
+      userId,
+    };
 
     if (ingredient) {
       where.ingredients = {
@@ -76,10 +81,11 @@ export class RecipesService {
     return recipes.map((recipe) => this.toRecipe(recipe));
   }
 
-  async findOne(id: string): Promise<Recipe> {
-    const recipe = await this.prisma.recipe.findUnique({
+  async findOne(id: string, userId: string): Promise<Recipe> {
+    const recipe = await this.prisma.recipe.findFirst({
       where: {
         id,
+        userId,
       },
     });
 
@@ -90,7 +96,10 @@ export class RecipesService {
     return this.toRecipe(recipe);
   }
 
-  async create(createRecipeDto: CreateRecipeDto): Promise<Recipe> {
+  async create(
+    createRecipeDto: CreateRecipeDto,
+    userId: string,
+  ): Promise<Recipe> {
     const recipe = await this.prisma.recipe.create({
       data: {
         description: createRecipeDto.description?.trim(),
@@ -100,14 +109,23 @@ export class RecipesService {
         rating: createRecipeDto.rating,
         steps: this.normalizeList(createRecipeDto.steps ?? []),
         tags: this.normalizeList(createRecipeDto.tags),
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
       },
     });
 
     return this.toRecipe(recipe);
   }
 
-  async update(id: string, updateRecipeDto: UpdateRecipeDto): Promise<Recipe> {
-    await this.findOne(id);
+  async update(
+    id: string,
+    updateRecipeDto: UpdateRecipeDto,
+    userId: string,
+  ): Promise<Recipe> {
+    await this.findOne(id, userId);
 
     const data: Prisma.RecipeUpdateInput = {
       description: updateRecipeDto.description?.trim(),
@@ -135,8 +153,8 @@ export class RecipesService {
     return this.toRecipe(updatedRecipe);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(id: string, userId: string): Promise<void> {
+    await this.findOne(id, userId);
 
     await this.prisma.recipe.delete({
       where: {
