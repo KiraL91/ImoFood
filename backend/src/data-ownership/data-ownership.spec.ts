@@ -1,4 +1,5 @@
 import { NotFoundException } from "@nestjs/common";
+import { FoodStatus as PrismaFoodStatus } from "@prisma/client";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -40,54 +41,111 @@ function createMealLogRecord() {
   };
 }
 
-test("foods are scoped to the authenticated user", async () => {
-  const findFirstArgs: unknown[] = [];
-  let deleteCalls = 0;
+function createFoodRecord(overrides: Record<string, unknown> = {}) {
+  const date = new Date(timestamp);
+
+  return {
+    category: "Cereal",
+    createdAt: date,
+    id: "food-id",
+    name: "Rice",
+    notes: null,
+    preferences: [],
+    status: PrismaFoodStatus.allowed,
+    suggestedServing: null,
+    tags: [],
+    tolerance: 5,
+    updatedAt: date,
+    ...overrides,
+  };
+}
+
+test("foods are shared and merged with authenticated user preferences", async () => {
   let findManyArgs: unknown;
-  let updateCalls = 0;
+  let findUniqueArgs: unknown;
+  let findUniqueOrThrowArgs: unknown;
+  let upsertArgs: unknown;
   const prisma = {
     food: {
-      delete: async () => {
-        deleteCalls += 1;
-      },
-      findFirst: async (args: unknown) => {
-        findFirstArgs.push(args);
-
-        return null;
-      },
       findMany: async (args: unknown) => {
         findManyArgs = args;
 
-        return [];
+        return [
+          createFoodRecord({
+            preferences: [
+              {
+                notes: "No me sienta bien",
+                status: PrismaFoodStatus.avoid,
+                tolerance: 1,
+              },
+            ],
+          }),
+        ];
       },
-      update: async () => {
-        updateCalls += 1;
+      findUnique: async (args: unknown) => {
+        findUniqueArgs = args;
+
+        return createFoodRecord();
+      },
+      findUniqueOrThrow: async (args: unknown) => {
+        findUniqueOrThrowArgs = args;
+
+        return createFoodRecord({
+          preferences: [
+            {
+              notes: "Probando",
+              status: PrismaFoodStatus.testing,
+              tolerance: 3,
+            },
+          ],
+        });
+      },
+    },
+    foodPreference: {
+      upsert: async (args: unknown) => {
+        upsertArgs = args;
       },
     },
   };
   const service = new FoodsService(prisma as unknown as PrismaService);
 
-  await service.findAll(userId);
-  await assert.rejects(
-    () => service.findOne("foreign-food-id", userId),
-    NotFoundException,
+  const foods = await service.findAll(userId);
+  const updatedFood = await service.updatePreference(
+    "food-id",
+    {
+      notes: "Probando",
+      status: "testing",
+      tolerance: 3,
+    },
+    userId,
   );
-  await assert.rejects(
-    () => service.update("foreign-food-id", { name: "Rice" }, userId),
-    NotFoundException,
+  const findManyInclude = asRecord(asRecord(findManyArgs).include);
+  const findManyPreferences = asRecord(findManyInclude.preferences);
+  const findManyPreferenceWhere = asRecord(findManyPreferences.where);
+  const preferenceWhere = asRecord(asRecord(upsertArgs).where);
+  const preferenceId = asRecord(preferenceWhere.userId_foodId);
+  const findUniqueOrThrowInclude = asRecord(
+    asRecord(findUniqueOrThrowArgs).include,
   );
-  await assert.rejects(
-    () => service.remove("foreign-food-id", userId),
-    NotFoundException,
+  const findUniqueOrThrowPreferences = asRecord(
+    findUniqueOrThrowInclude.preferences,
+  );
+  const findUniqueOrThrowPreferenceWhere = asRecord(
+    findUniqueOrThrowPreferences.where,
   );
 
-  assert.equal(whereFrom(findManyArgs).userId, userId);
-  assert.equal(
-    findFirstArgs.every((args) => whereFrom(args).userId === userId),
-    true,
-  );
-  assert.equal(updateCalls, 0);
-  assert.equal(deleteCalls, 0);
+  assert.equal(foods[0]?.status, "avoid");
+  assert.equal(foods[0]?.tolerance, 1);
+  assert.equal(foods[0]?.notes, "No me sienta bien");
+  assert.equal(Object.hasOwn(whereFrom(findManyArgs), "userId"), false);
+  assert.equal(findManyPreferenceWhere.userId, userId);
+  assert.equal(whereFrom(findUniqueArgs).id, "food-id");
+  assert.equal(preferenceId.foodId, "food-id");
+  assert.equal(preferenceId.userId, userId);
+  assert.equal(findUniqueOrThrowPreferenceWhere.userId, userId);
+  assert.equal(updatedFood.status, "testing");
+  assert.equal(updatedFood.tolerance, 3);
+  assert.equal(updatedFood.notes, "Probando");
 });
 
 test("recipes are scoped to the authenticated user", async () => {
@@ -190,7 +248,7 @@ test("treatments are scoped to the authenticated user", async () => {
   assert.equal(deleteCalls, 0);
 });
 
-test("meal logs cannot link foods or recipes from another user", async () => {
+test("meal logs cannot link recipes from another user but can link shared foods", async () => {
   let createCalls = 0;
   let foodFindManyArgs: unknown;
   let recipeFindFirstArgs: unknown;
@@ -199,12 +257,14 @@ test("meal logs cannot link foods or recipes from another user", async () => {
       findMany: async (args: unknown) => {
         foodFindManyArgs = args;
 
-        return [];
+        return [{ id: "shared-food-id" }];
       },
     },
     mealLog: {
       create: async () => {
         createCalls += 1;
+
+        return createMealLogRecord();
       },
     },
     recipe: {
@@ -229,22 +289,18 @@ test("meal logs cannot link foods or recipes from another user", async () => {
       ),
     NotFoundException,
   );
-  await assert.rejects(
-    () =>
-      service.create(
-        {
-          consumedAt: timestamp,
-          description: "Meal with foreign food",
-          foodIds: ["foreign-food-id"],
-        },
-        userId,
-      ),
-    NotFoundException,
+  await service.create(
+    {
+      consumedAt: timestamp,
+      description: "Meal with shared food",
+      foodIds: ["shared-food-id"],
+    },
+    userId,
   );
 
   assert.equal(whereFrom(recipeFindFirstArgs).userId, userId);
-  assert.equal(whereFrom(foodFindManyArgs).userId, userId);
-  assert.equal(createCalls, 0);
+  assert.equal(Object.hasOwn(whereFrom(foodFindManyArgs), "userId"), false);
+  assert.equal(createCalls, 1);
 });
 
 test("meal log updates cannot switch to a foreign recipe", async () => {

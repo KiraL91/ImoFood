@@ -6,33 +6,40 @@ import type { CreateMealLogDto } from "./dto/create-meal-log.dto";
 import type { UpdateMealLogDto } from "./dto/update-meal-log.dto";
 import type { MealLog } from "./types/meal-log";
 
-const mealLogInclude = {
-  foods: {
-    include: {
-      food: {
-        select: {
-          category: true,
-          id: true,
-          name: true,
-          status: true,
+type PrismaMealLogWithRelations = Prisma.MealLogGetPayload<{
+  include: ReturnType<typeof getMealLogInclude>;
+}>;
+
+function getMealLogInclude(userId: string) {
+  return {
+    foods: {
+      include: {
+        food: {
+          include: {
+            preferences: {
+              select: {
+                status: true,
+              },
+              take: 1,
+              where: {
+                userId,
+              },
+            },
+          },
         },
       },
+      orderBy: {
+        createdAt: "asc",
+      },
     },
-    orderBy: {
-      createdAt: "asc",
+    recipe: {
+      select: {
+        id: true,
+        name: true,
+      },
     },
-  },
-  recipe: {
-    select: {
-      id: true,
-      name: true,
-    },
-  },
-} satisfies Prisma.MealLogInclude;
-
-type PrismaMealLogWithRelations = Prisma.MealLogGetPayload<{
-  include: typeof mealLogInclude;
-}>;
+  } satisfies Prisma.MealLogInclude;
+}
 
 @Injectable()
 export class MealLogsService {
@@ -40,7 +47,7 @@ export class MealLogsService {
 
   async findAll(userId: string): Promise<MealLog[]> {
     const mealLogs = await this.prisma.mealLog.findMany({
-      include: mealLogInclude,
+      include: getMealLogInclude(userId),
       orderBy: {
         consumedAt: "desc",
       },
@@ -54,7 +61,7 @@ export class MealLogsService {
 
   async findOne(id: string, userId: string): Promise<MealLog> {
     const mealLog = await this.prisma.mealLog.findFirst({
-      include: mealLogInclude,
+      include: getMealLogInclude(userId),
       where: {
         id,
         userId,
@@ -79,7 +86,7 @@ export class MealLogsService {
       await this.ensureRecipeExists(recipeId, userId);
     }
 
-    await this.ensureFoodsExist(foodIds, userId);
+    await this.ensureFoodsExist(foodIds);
 
     const mealLog = await this.prisma.mealLog.create({
       data: {
@@ -111,7 +118,7 @@ export class MealLogsService {
           },
         },
       },
-      include: mealLogInclude,
+      include: getMealLogInclude(userId),
     });
 
     return this.toMealLog(mealLog);
@@ -132,7 +139,7 @@ export class MealLogsService {
     }
 
     if (foodIds !== undefined) {
-      await this.ensureFoodsExist(foodIds, userId);
+      await this.ensureFoodsExist(foodIds);
     }
 
     const data: Prisma.MealLogUpdateInput = {
@@ -184,7 +191,7 @@ export class MealLogsService {
       }
 
       return prisma.mealLog.findUniqueOrThrow({
-        include: mealLogInclude,
+        include: getMealLogInclude(userId),
         where: {
           id,
         },
@@ -253,10 +260,7 @@ export class MealLogsService {
     }
   }
 
-  private async ensureFoodsExist(
-    foodIds: string[],
-    userId: string,
-  ): Promise<void> {
+  private async ensureFoodsExist(foodIds: string[]): Promise<void> {
     if (foodIds.length === 0) {
       return;
     }
@@ -269,7 +273,6 @@ export class MealLogsService {
         id: {
           in: foodIds,
         },
-        userId,
       },
     });
     const existingFoodIds = new Set(foods.map((food) => food.id));
@@ -289,7 +292,8 @@ export class MealLogsService {
       category: mealLogFood.food.category,
       id: mealLogFood.food.id,
       name: mealLogFood.food.name,
-      status: mealLogFood.food.status,
+      status: (mealLogFood.food.preferences[0]?.status ??
+        mealLogFood.food.status) as MealLog["foods"][number]["status"],
     }));
 
     return {

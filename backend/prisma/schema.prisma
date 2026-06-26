@@ -23,8 +23,6 @@ enum UserRole {
 
 model Food {
   id               String        @id @default(cuid())
-  userId           String
-  user             AppUser       @relation(fields: [userId], references: [id])
   name             String
   category         String
   status           FoodStatus
@@ -35,12 +33,26 @@ model Food {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   mealLogs         MealLogFood[]
+  preferences      FoodPreference[]
 
-  @@index([userId, name])
-  @@index([userId, category])
-  @@index([userId, status])
   @@index([category])
   @@index([status])
+}
+
+model FoodPreference {
+  userId    String
+  foodId    String
+  status    FoodStatus
+  tolerance Int
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      AppUser    @relation(fields: [userId], references: [id])
+  food      Food       @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@id([userId, foodId])
+  @@index([foodId])
+  @@index([userId, status])
 }
 
 model Recipe {
@@ -171,7 +183,7 @@ model AppUser {
   role                  UserRole       @default(member)
   active                Boolean        @default(true)
   passwordHash          String
-  foods                 Food[]
+  foodPreferences       FoodPreference[]
   recipes               Recipe[]
   mealLogs              MealLog[]
   symptomLogs           SymptomLog[]

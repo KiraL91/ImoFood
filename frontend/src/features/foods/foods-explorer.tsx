@@ -15,6 +15,7 @@ import {
   useFoods,
   useSuggestFoodInfo,
   useUpdateFood,
+  useUpdateFoodPreference,
 } from "@/features/foods/foods-queries";
 import { useAiSuggestionsConfig } from "@/features/meal-ideas/ai-meal-ideas-queries";
 import { foodStatusMeta, foodStatusOrder } from "@/lib/constants/status";
@@ -42,7 +43,9 @@ export function FoodsExplorer() {
   const hasBackendConfigured = Boolean(env.NEXT_PUBLIC_API_BASE_URL);
   const { hasPermission, isAuthenticated } = useAuth();
   const canCreateFood = hasPermission("foods:create");
-  const canUpdateFood = hasPermission("foods:update");
+  const canUpdateCatalogFood = hasPermission("foods:update");
+  const canUpdateFoodPreference = hasPermission("food-preferences:update");
+  const canUpdateFood = canUpdateCatalogFood || canUpdateFoodPreference;
   const canDeleteFood = hasPermission("foods:delete");
   const canCreateMealLog = hasPermission("meal-logs:create");
   const canCreateAiSuggestion = hasPermission("ai-suggestions:create");
@@ -50,13 +53,17 @@ export function FoodsExplorer() {
   const aiConfigQuery = useAiSuggestionsConfig();
   const createFoodMutation = useCreateFood();
   const updateFoodMutation = useUpdateFood();
+  const updateFoodPreferenceMutation = useUpdateFoodPreference();
   const deleteFoodMutation = useDeleteFood();
   const suggestFoodInfoMutation = useSuggestFoodInfo();
   const foods = useMemo(
     () => (hasBackendConfigured && !isAuthenticated ? [] : (foodsQuery.data ?? [])),
     [foodsQuery.data, hasBackendConfigured, isAuthenticated],
   );
-  const isSubmitting = createFoodMutation.isPending || updateFoodMutation.isPending;
+  const isSubmitting =
+    createFoodMutation.isPending ||
+    updateFoodMutation.isPending ||
+    updateFoodPreferenceMutation.isPending;
   const isFormDisabled =
     !hasBackendConfigured ||
     !isAuthenticated ||
@@ -74,7 +81,7 @@ export function FoodsExplorer() {
     : !isAuthenticated
       ? "Inicia sesion para usar el CRUD real de alimentos."
       : editingFood
-        ? "Tu rol no permite editar alimentos."
+        ? "Tu rol no permite editar preferencias de alimentos."
         : "Tu rol no permite crear alimentos.";
 
   const filteredFoods = useMemo(() => {
@@ -98,10 +105,22 @@ export function FoodsExplorer() {
 
     try {
       if (editingFood) {
-        await updateFoodMutation.mutateAsync({
-          id: editingFood.id,
-          input,
-        });
+        if (canUpdateCatalogFood) {
+          await updateFoodMutation.mutateAsync({
+            id: editingFood.id,
+            input,
+          });
+        } else {
+          await updateFoodPreferenceMutation.mutateAsync({
+            id: editingFood.id,
+            input: {
+              notes: input.notes,
+              status: input.status,
+              tolerance: input.tolerance,
+            },
+          });
+        }
+
         setEditingFood(undefined);
         setIsFoodDialogOpen(false);
         return;
@@ -199,6 +218,7 @@ export function FoodsExplorer() {
         isSuggestingWithAi={suggestFoodInfoMutation.isPending}
         isSubmitting={isSubmitting}
         mode={editingFood ? "edit" : "create"}
+        editScope={editingFood && !canUpdateCatalogFood ? "preference" : "catalog"}
         onSuggestWithAi={
           canSuggestFoodWithAi ? suggestFoodInfoMutation.mutateAsync : undefined
         }

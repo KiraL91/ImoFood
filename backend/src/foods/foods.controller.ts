@@ -19,6 +19,7 @@ import { Permissions } from "../auth/permissions.decorator";
 import { PermissionsGuard } from "../auth/permissions.guard";
 import type { AuthenticatedRequest } from "../auth/types/authenticated-user";
 import { CreateFoodDto } from "./dto/create-food.dto";
+import { UpdateFoodPreferenceDto } from "./dto/update-food-preference.dto";
 import { UpdateFoodDto } from "./dto/update-food.dto";
 import { FoodsService } from "./foods.service";
 import type { Food, FoodStatus } from "./types/food";
@@ -76,6 +77,20 @@ export class FoodsController {
     return this.foodsService.update(
       id,
       updateFoodDto,
+      this.getRequestUserId(request),
+    );
+  }
+
+  @Patch(":id/preference")
+  @Permissions("food-preferences:update")
+  updatePreference(
+    @Req() request: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body() updateFoodPreferenceDto: UpdateFoodPreferenceDto,
+  ): Promise<Food> {
+    return this.foodsService.updatePreference(
+      id,
+      updateFoodPreferenceDto,
       this.getRequestUserId(request),
     );
   }

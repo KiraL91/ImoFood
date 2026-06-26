@@ -18,7 +18,7 @@ The app is private except for login.
 
 Core domains already present:
 
-- Foods: CRUD, statuses, tolerance, suggested serving, food detail, AI food info suggestions on demand.
+- Foods: shared catalog, user-specific status/tolerance/notes preferences, suggested serving, food detail, AI food info suggestions on demand.
 - Recipes: CRUD, rating 1-5, searchable by rating/ingredients, steps visible from cards.
 - Meal ideas: local suggestions and AI suggestions from selected safe/reasonable foods.
 - Meal logs: food/recipe intake tracking, date filters, links to symptoms.
@@ -48,6 +48,7 @@ Data ownership:
 - Use existing patterns: feature folders, API files, query hooks, modal forms, floating create buttons, local UI components.
 - After implementing a user-requested code change, run relevant validation and create a git commit automatically.
 - Do not push unless the user asks.
+- Foods are a shared catalog. Owner manages catalog items; user-specific food state lives in `FoodPreference`.
 
 ## Context Hygiene
 

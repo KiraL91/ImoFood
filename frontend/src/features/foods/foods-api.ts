@@ -28,6 +28,10 @@ export type CreateFoodInput = {
 
 export type UpdateFoodInput = Partial<CreateFoodInput>;
 
+export type UpdateFoodPreferenceInput = Partial<
+  Pick<CreateFoodInput, "notes" | "status" | "tolerance">
+>;
+
 export type SuggestFoodInfoInput = {
   category?: string;
   name: string;
@@ -89,6 +93,21 @@ export async function updateFood({
   input: UpdateFoodInput;
 }): Promise<Food> {
   const data = await apiClient<unknown>(`/foods/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+
+  return foodSchema.parse(data);
+}
+
+export async function updateFoodPreference({
+  id,
+  input,
+}: {
+  id: string;
+  input: UpdateFoodPreferenceInput;
+}): Promise<Food> {
+  const data = await apiClient<unknown>(`/foods/${id}/preference`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });

@@ -7,7 +7,9 @@ import {
   getFoods,
   suggestFoodInfo,
   updateFood,
+  updateFoodPreference,
 } from "@/features/foods/foods-api";
+import { mealLogQueryKeys } from "@/features/meal-logs/meal-logs-queries";
 import { env } from "@/lib/env";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -43,6 +45,18 @@ export function useUpdateFood() {
     mutationFn: updateFood,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: foodQueryKeys.all });
+    },
+  });
+}
+
+export function useUpdateFoodPreference() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateFoodPreference,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: foodQueryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: mealLogQueryKeys.all });
     },
   });
 }

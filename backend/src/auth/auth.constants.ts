@@ -7,6 +7,7 @@ export const permissions = [
   "foods:create",
   "foods:update",
   "foods:delete",
+  "food-preferences:update",
   "recipes:read",
   "recipes:create",
   "recipes:update",
@@ -52,6 +53,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     "foods:create",
     "foods:update",
     "foods:delete",
+    "food-preferences:update",
     "recipes:read",
     "recipes:create",
     "recipes:update",
@@ -83,8 +85,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
   ],
   [UserRole.member]: [
     "foods:read",
-    "foods:create",
-    "foods:update",
+    "food-preferences:update",
     "recipes:read",
     "recipes:create",
     "recipes:update",
@@ -134,7 +135,7 @@ const roleMetadata: Record<
   },
   [UserRole.member]: {
     description:
-      "Puede crear y editar datos personales sin administrar usuarios.",
+      "Puede crear y editar datos personales y preferencias sin administrar usuarios.",
     label: "Member",
   },
   [UserRole.readonly]: {

@@ -32,6 +32,7 @@ type FoodFormDialogProps = {
   isOpen: boolean;
   isSuggestingWithAi?: boolean;
   isSubmitting?: boolean;
+  editScope?: "catalog" | "preference";
   mode?: "create" | "edit";
   onSuggestWithAi?: (input: SuggestFoodInfoInput) => Promise<AiFoodInfoSuggestion>;
   onCancel?: () => void;
@@ -173,6 +174,7 @@ export function FoodFormDialog({
   isOpen,
   isSuggestingWithAi = false,
   isSubmitting = false,
+  editScope = "catalog",
   mode = "create",
   onSuggestWithAi,
   onCancel,
@@ -186,6 +188,8 @@ export function FoodFormDialog({
   const [suggestionFeedback, setSuggestionFeedback] = useState<string | null>(null);
   const disabled = isDisabled || isSubmitting;
   const isEditing = mode === "edit";
+  const isPreferenceEdit = isEditing && editScope === "preference";
+  const catalogFieldsDisabled = disabled || isPreferenceEdit;
   const isDuplicateCheckPending = !isEditing && isCheckingExistingFoods;
   const comparableFoodName = useMemo(
     () => getComparableFoodName(formState.name),
@@ -237,6 +241,17 @@ export function FoodFormDialog({
         : formState.name.trim().length < 2
           ? "Escribe primero el nombre del alimento."
           : "Rellenar campos con una propuesta de IA.";
+  const dialogTitle = isPreferenceEdit
+    ? "Editar preferencia"
+    : isEditing
+      ? "Editar alimento"
+      : "Nuevo alimento";
+  const dialogDescription = isDisabled
+    ? (disabledReason ??
+      "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend.")
+    : isPreferenceEdit
+      ? "Ajusta tu estado, tolerancia y notas para este alimento."
+      : "Guarda alimentos y raciones sugeridas en la base de conocimiento.";
 
   useEffect(() => {
     if (isOpen) {
@@ -299,13 +314,8 @@ export function FoodFormDialog({
     <Dialog
       open={isOpen}
       onOpenChange={handleOpenChange}
-      title={isEditing ? "Editar alimento" : "Nuevo alimento"}
-      description={
-        isDisabled
-          ? (disabledReason ??
-            "Configura NEXT_PUBLIC_API_BASE_URL para guardar contra el backend.")
-          : "Guarda alimentos y raciones sugeridas en la base de conocimiento."
-      }
+      title={dialogTitle}
+      description={dialogDescription}
     >
       <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {errorMessage && (
@@ -342,7 +352,7 @@ export function FoodFormDialog({
               setFormState((current) => ({ ...current, name: event.target.value }))
             }
             placeholder="Ej. Pavo cocido"
-            disabled={disabled}
+            disabled={catalogFieldsDisabled}
             required
           />
           {suggestionError && (
@@ -411,7 +421,7 @@ export function FoodFormDialog({
               }))
             }
             placeholder="Proteina, verdura, fruta..."
-            disabled={disabled}
+            disabled={catalogFieldsDisabled}
             required
           />
         </label>
@@ -465,7 +475,7 @@ export function FoodFormDialog({
               setFormState((current) => ({ ...current, tags: event.target.value }))
             }
             placeholder="base, rapido, sin gluten"
-            disabled={disabled}
+            disabled={catalogFieldsDisabled}
           />
         </label>
 
@@ -480,7 +490,7 @@ export function FoodFormDialog({
               }))
             }
             placeholder="Ej. 50 g, equivale a medio aguacate de tamano medio"
-            disabled={disabled}
+            disabled={catalogFieldsDisabled}
           />
         </label>
 

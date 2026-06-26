@@ -5,11 +5,13 @@ import {
 } from "@nestjs/common";
 import {
   Food as PrismaFood,
+  FoodPreference as PrismaFoodPreference,
   FoodStatus as PrismaFoodStatus,
   Prisma,
 } from "@prisma/client";
 
 import type { CreateFoodDto } from "./dto/create-food.dto";
+import type { UpdateFoodPreferenceDto } from "./dto/update-food-preference.dto";
 import type { UpdateFoodDto } from "./dto/update-food.dto";
 import { FOOD_STATUSES, type Food, type FoodFilters } from "./types/food";
 import { PrismaService } from "../prisma/prisma.service";
@@ -21,6 +23,11 @@ const foodStatusToPrisma: Record<Food["status"], PrismaFoodStatus> = {
   testing: PrismaFoodStatus.testing,
 };
 
+type FoodPreferenceRecord = Pick<
+  PrismaFoodPreference,
+  "notes" | "status" | "tolerance"
+>;
+
 @Injectable()
 export class FoodsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -31,13 +38,9 @@ export class FoodsService {
     const search = filters.search?.trim().toLowerCase();
     const category = filters.category?.trim().toLowerCase();
     const tag = filters.tag?.trim().toLowerCase();
-    const where: Prisma.FoodWhereInput = {
-      userId,
-    };
+    const where: Prisma.FoodWhereInput = {};
 
-    if (filters.status) {
-      where.status = foodStatusToPrisma[filters.status];
-    }
+    const preferenceInclude = this.getPreferenceInclude(userId);
 
     if (category) {
       where.category = {
@@ -73,6 +76,17 @@ export class FoodsService {
           },
         },
         {
+          preferences: {
+            some: {
+              notes: {
+                contains: search,
+                mode: "insensitive",
+              },
+              userId,
+            },
+          },
+        },
+        {
           suggestedServing: {
             contains: search,
             mode: "insensitive",
@@ -87,20 +101,25 @@ export class FoodsService {
     }
 
     const foods = await this.prisma.food.findMany({
+      include: preferenceInclude,
       orderBy: {
         name: "asc",
       },
       where,
     });
 
-    return foods.map((food) => this.toFood(food));
+    const mergedFoods = foods.map((food) => this.toFood(food));
+
+    return filters.status
+      ? mergedFoods.filter((food) => food.status === filters.status)
+      : mergedFoods;
   }
 
   async findOne(id: string, userId: string): Promise<Food> {
-    const food = await this.prisma.food.findFirst({
+    const food = await this.prisma.food.findUnique({
+      include: this.getPreferenceInclude(userId),
       where: {
         id,
-        userId,
       },
     });
 
@@ -116,17 +135,25 @@ export class FoodsService {
       data: {
         category: createFoodDto.category.trim(),
         name: createFoodDto.name.trim(),
-        notes: createFoodDto.notes?.trim(),
+        notes: createFoodDto.notes?.trim() || undefined,
+        preferences: {
+          create: {
+            notes: createFoodDto.notes?.trim() || undefined,
+            status: foodStatusToPrisma[createFoodDto.status],
+            tolerance: createFoodDto.tolerance,
+            user: {
+              connect: {
+                id: userId,
+              },
+            },
+          },
+        },
         status: foodStatusToPrisma[createFoodDto.status],
         suggestedServing: createFoodDto.suggestedServing?.trim() || undefined,
         tags: this.normalizeTags(createFoodDto.tags),
         tolerance: createFoodDto.tolerance,
-        user: {
-          connect: {
-            id: userId,
-          },
-        },
       },
+      include: this.getPreferenceInclude(userId),
     });
 
     return this.toFood(food);
@@ -139,10 +166,11 @@ export class FoodsService {
   ): Promise<Food> {
     await this.findOne(id, userId);
 
+    const normalizedNotes = this.normalizeOptionalText(updateFoodDto.notes);
     const data: Prisma.FoodUpdateInput = {
       category: updateFoodDto.category?.trim(),
       name: updateFoodDto.name?.trim(),
-      notes: updateFoodDto.notes?.trim(),
+      notes: normalizedNotes,
       status: updateFoodDto.status
         ? foodStatusToPrisma[updateFoodDto.status]
         : undefined,
@@ -156,8 +184,102 @@ export class FoodsService {
       tolerance: updateFoodDto.tolerance,
     };
 
-    const updatedFood = await this.prisma.food.update({
-      data,
+    const updatedFood = await this.prisma.$transaction(async (prisma) => {
+      const food = await prisma.food.update({
+        data,
+        where: {
+          id,
+        },
+      });
+
+      if (
+        updateFoodDto.status !== undefined ||
+        updateFoodDto.tolerance !== undefined ||
+        updateFoodDto.notes !== undefined
+      ) {
+        await prisma.foodPreference.upsert({
+          create: {
+            foodId: id,
+            notes: normalizedNotes === undefined ? food.notes : normalizedNotes,
+            status: updateFoodDto.status
+              ? foodStatusToPrisma[updateFoodDto.status]
+              : food.status,
+            tolerance: updateFoodDto.tolerance ?? food.tolerance,
+            userId,
+          },
+          update: {
+            notes: normalizedNotes,
+            status: updateFoodDto.status
+              ? foodStatusToPrisma[updateFoodDto.status]
+              : undefined,
+            tolerance: updateFoodDto.tolerance,
+          },
+          where: {
+            userId_foodId: {
+              foodId: id,
+              userId,
+            },
+          },
+        });
+      }
+
+      return prisma.food.findUniqueOrThrow({
+        include: this.getPreferenceInclude(userId),
+        where: {
+          id,
+        },
+      });
+    });
+
+    return this.toFood(updatedFood);
+  }
+
+  async updatePreference(
+    id: string,
+    updateFoodPreferenceDto: UpdateFoodPreferenceDto,
+    userId: string,
+  ): Promise<Food> {
+    const food = await this.prisma.food.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!food) {
+      throw new NotFoundException(`Food with id "${id}" was not found.`);
+    }
+
+    const normalizedNotes = this.normalizeOptionalText(
+      updateFoodPreferenceDto.notes,
+    );
+
+    await this.prisma.foodPreference.upsert({
+      create: {
+        foodId: id,
+        notes: normalizedNotes === undefined ? food.notes : normalizedNotes,
+        status: updateFoodPreferenceDto.status
+          ? foodStatusToPrisma[updateFoodPreferenceDto.status]
+          : food.status,
+        tolerance: updateFoodPreferenceDto.tolerance ?? food.tolerance,
+        userId,
+      },
+      update: {
+        notes: normalizedNotes,
+        status: updateFoodPreferenceDto.status
+          ? foodStatusToPrisma[updateFoodPreferenceDto.status]
+          : undefined,
+        tolerance: updateFoodPreferenceDto.tolerance,
+      },
+      where: {
+        userId_foodId: {
+          foodId: id,
+          userId,
+        },
+      },
+    });
+
+    const updatedFood = await this.prisma.food.findUniqueOrThrow({
+      include: this.getPreferenceInclude(userId),
       where: {
         id,
       },
@@ -190,17 +312,44 @@ export class FoodsService {
     );
   }
 
-  private toFood(food: PrismaFood): Food {
+  private normalizeOptionalText(
+    value?: string | null,
+  ): string | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const trimmedValue = value?.trim();
+
+    return trimmedValue && trimmedValue.length > 0 ? trimmedValue : null;
+  }
+
+  private getPreferenceInclude(userId: string) {
+    return {
+      preferences: {
+        take: 1,
+        where: {
+          userId,
+        },
+      },
+    } satisfies Prisma.FoodInclude;
+  }
+
+  private toFood(
+    food: PrismaFood & { preferences?: FoodPreferenceRecord[] },
+  ): Food {
+    const preference = food.preferences?.[0];
+
     return {
       category: food.category,
       createdAt: food.createdAt.toISOString(),
       id: food.id,
       name: food.name,
-      notes: food.notes ?? undefined,
-      status: food.status,
+      notes: preference?.notes ?? food.notes ?? undefined,
+      status: (preference?.status ?? food.status) as Food["status"],
       suggestedServing: food.suggestedServing ?? undefined,
       tags: [...food.tags],
-      tolerance: food.tolerance as Food["tolerance"],
+      tolerance: (preference?.tolerance ?? food.tolerance) as Food["tolerance"],
       updatedAt: food.updatedAt.toISOString(),
     };
   }

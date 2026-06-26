@@ -88,7 +88,13 @@ const fallbackRoleOptions: ManagedUserRole[] = ["owner", "member", "readonly"];
 const rolePermissionGroups: PermissionGroup[] = [
   {
     label: "Alimentos",
-    permissions: ["foods:read", "foods:create", "foods:update", "foods:delete"],
+    permissions: [
+      "foods:read",
+      "foods:create",
+      "foods:update",
+      "foods:delete",
+      "food-preferences:update",
+    ],
   },
   {
     label: "Recetas",

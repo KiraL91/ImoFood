@@ -52,7 +52,10 @@ Foods:
 - Includes `suggestedServing`.
 - Food statuses: `allowed`, `testing`, `caution`, `avoid`.
 - Tolerance: integer 1-5.
-- Personal per authenticated user; always scope read/update/delete by `userId`.
+- Shared catalog for all users.
+- Catalog create/update/delete is owner-only through `foods:*` permissions.
+- User-specific status/tolerance/notes live in `FoodPreference`.
+- Merge the authenticated user's `FoodPreference` over catalog defaults before returning foods.
 
 Recipes:
 
@@ -64,7 +67,8 @@ Meal logs:
 
 - CRUD under `/meal-logs`.
 - Can link recipes and concrete foods.
-- Linked recipes and foods must belong to the same user.
+- Linked recipes must belong to the same user; linked foods come from the shared catalog.
+- Food status returned inside meal logs should reflect the authenticated user's food preference when present.
 - Personal per authenticated user; always scope read/update/delete by `userId`.
 
 Symptom logs:
@@ -86,7 +90,7 @@ AI:
 - `POST /ai/suggestions/meal-ideas`
 - `POST /ai/suggestions/food-info`
 - Protected by auth and `ai-suggestions:*` permissions.
-- Meal ideas and food-info context must be scoped to the authenticated user's foods and recipes.
+- Meal ideas and food-info context use the shared food catalog overlaid with the authenticated user's food preferences, plus recipes scoped to that user.
 
 Users:
 
@@ -123,7 +127,7 @@ Users:
 Roles:
 
 - `owner`: full permissions.
-- `member`: read/create/update for most personal data and AI suggestions.
+- `member`: read shared foods, update own food preferences, create/update most personal data, and use AI suggestions.
 - `readonly`: read-only.
 
 User management:

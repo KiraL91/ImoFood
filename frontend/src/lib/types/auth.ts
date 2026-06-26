@@ -5,6 +5,7 @@ export type Permission =
   | "foods:create"
   | "foods:update"
   | "foods:delete"
+  | "food-preferences:update"
   | "recipes:read"
   | "recipes:create"
   | "recipes:update"

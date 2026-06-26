@@ -5,7 +5,12 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from "@nestjs/common";
-import { FoodStatus as PrismaFoodStatus } from "@prisma/client";
+import {
+  Food as PrismaFood,
+  FoodPreference as PrismaFoodPreference,
+  FoodStatus as PrismaFoodStatus,
+  Prisma,
+} from "@prisma/client";
 
 import { AI_MODEL_PROVIDER } from "./ai.tokens";
 import type { CreateFoodInfoSuggestionDto } from "./dto/create-food-info-suggestion.dto";
@@ -67,6 +72,15 @@ type FoodInfoContext = {
     tolerance: number;
   }>;
   tags: string[];
+};
+
+type FoodPreferenceRecord = Pick<
+  PrismaFoodPreference,
+  "notes" | "status" | "tolerance"
+>;
+
+type FoodWithPreference = PrismaFood & {
+  preferences?: FoodPreferenceRecord[];
 };
 
 @Injectable()
@@ -166,92 +180,73 @@ export class AiSuggestionsService {
           },
         }
       : {};
-    const [safeFoods, reasonableFoods, blockedFoods, highRatedRecipes] =
-      await Promise.all([
-        this.prisma.food.findMany({
-          orderBy: {
-            name: "asc",
+    const [foods, highRatedRecipes] = await Promise.all([
+      this.prisma.food.findMany({
+        include: this.getFoodPreferenceInclude(userId),
+        orderBy: {
+          name: "asc",
+        },
+        where: selectedFoodWhere,
+      }),
+      this.prisma.recipe.findMany({
+        orderBy: {
+          name: "asc",
+        },
+        select: {
+          ingredients: true,
+          name: true,
+          rating: true,
+          tags: true,
+        },
+        where: {
+          rating: {
+            gte: 4,
           },
-          select: {
-            id: true,
-            name: true,
-            suggestedServing: true,
-            tags: true,
-            tolerance: true,
-          },
-          where: {
-            ...selectedFoodWhere,
-            status: PrismaFoodStatus.allowed,
-            tolerance: {
-              gte: 4,
-            },
-            userId,
-          },
-        }),
-        this.prisma.food.findMany({
-          orderBy: {
-            name: "asc",
-          },
-          select: {
-            id: true,
-            name: true,
-            status: true,
-            suggestedServing: true,
-            tags: true,
-            tolerance: true,
-          },
-          where: {
-            ...selectedFoodWhere,
-            status: {
-              in: [PrismaFoodStatus.allowed, PrismaFoodStatus.testing],
-            },
-            tolerance: {
-              gte: 3,
-            },
-            userId,
-          },
-        }),
-        this.prisma.food.findMany({
-          orderBy: {
-            name: "asc",
-          },
-          select: {
-            name: true,
-          },
-          where: {
-            OR: [
-              {
-                status: {
-                  in: [PrismaFoodStatus.avoid, PrismaFoodStatus.caution],
-                },
-              },
-              {
-                tolerance: {
-                  lt: 3,
-                },
-              },
-            ],
-            userId,
-          },
-        }),
-        this.prisma.recipe.findMany({
-          orderBy: {
-            name: "asc",
-          },
-          select: {
-            ingredients: true,
-            name: true,
-            rating: true,
-            tags: true,
-          },
-          where: {
-            rating: {
-              gte: 4,
-            },
-            userId,
-          },
-        }),
-      ]);
+          userId,
+        },
+      }),
+    ]);
+    const personalFoods = foods.map((food) => this.toPersonalFood(food));
+    const safeFoods = personalFoods
+      .filter(
+        (food) =>
+          food.status === PrismaFoodStatus.allowed && food.tolerance >= 4,
+      )
+      .map((food) => ({
+        id: food.id,
+        name: food.name,
+        suggestedServing: food.suggestedServing,
+        tags: food.tags,
+        tolerance: food.tolerance,
+      }));
+    const reasonableStatuses: PrismaFoodStatus[] = [
+      PrismaFoodStatus.allowed,
+      PrismaFoodStatus.testing,
+    ];
+    const blockedStatuses: PrismaFoodStatus[] = [
+      PrismaFoodStatus.avoid,
+      PrismaFoodStatus.caution,
+    ];
+    const reasonableFoods = personalFoods
+      .filter(
+        (food) =>
+          reasonableStatuses.includes(food.status) && food.tolerance >= 3,
+      )
+      .map((food) => ({
+        id: food.id,
+        name: food.name,
+        status: food.status,
+        suggestedServing: food.suggestedServing,
+        tags: food.tags,
+        tolerance: food.tolerance,
+      }));
+    const blockedFoods = personalFoods
+      .filter(
+        (food) => blockedStatuses.includes(food.status) || food.tolerance < 3,
+      )
+      .map((food) => ({
+        name: food.name,
+      }));
 
     if (hasSelectedFoods && reasonableFoods.length === 0) {
       throw new BadRequestException(
@@ -269,24 +264,16 @@ export class AiSuggestionsService {
 
   private async getFoodInfoContext(userId: string): Promise<FoodInfoContext> {
     const foods = await this.prisma.food.findMany({
+      include: this.getFoodPreferenceInclude(userId),
       orderBy: {
         name: "asc",
       },
-      select: {
-        category: true,
-        name: true,
-        status: true,
-        tags: true,
-        tolerance: true,
-      },
       take: 120,
-      where: {
-        userId,
-      },
     });
+    const personalFoods = foods.map((food) => this.toPersonalFood(food));
     const categories = Array.from(
       new Set(
-        foods
+        personalFoods
           .map((food) => food.category.trim())
           .filter((category) => category.length > 0),
       ),
@@ -295,7 +282,7 @@ export class AiSuggestionsService {
     );
     const tags = Array.from(
       new Set(
-        foods
+        personalFoods
           .flatMap((food) => food.tags)
           .map((tag) => tag.trim())
           .filter((tag) => tag.length > 0),
@@ -304,8 +291,40 @@ export class AiSuggestionsService {
 
     return {
       categories,
-      existingFoods: foods,
+      existingFoods: personalFoods.map((food) => ({
+        category: food.category,
+        name: food.name,
+        status: food.status,
+        tags: food.tags,
+        tolerance: food.tolerance,
+      })),
       tags,
+    };
+  }
+
+  private getFoodPreferenceInclude(userId: string) {
+    return {
+      preferences: {
+        take: 1,
+        where: {
+          userId,
+        },
+      },
+    } satisfies Prisma.FoodInclude;
+  }
+
+  private toPersonalFood(food: FoodWithPreference) {
+    const preference = food.preferences?.[0];
+
+    return {
+      category: food.category,
+      id: food.id,
+      name: food.name,
+      notes: preference?.notes ?? food.notes,
+      status: preference?.status ?? food.status,
+      suggestedServing: food.suggestedServing,
+      tags: [...food.tags],
+      tolerance: preference?.tolerance ?? food.tolerance,
     };
   }
 
