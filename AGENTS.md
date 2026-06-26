@@ -138,7 +138,10 @@ Do not commit real `.env.local` values.
 
 ## Test Users
 
-Seed creates:
+Seed creates only local/test users and does not insert demo domain data.
+Fresh databases should start with empty foods, recipes, logs, symptoms, and treatments.
+
+Seed users:
 
 - `owner` / `owner`
 - `member` / `member`

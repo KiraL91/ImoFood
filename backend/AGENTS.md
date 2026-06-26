@@ -30,7 +30,7 @@ NestJS API for IMO Meals.
 - `src/ai`: provider abstraction and suggestion endpoints.
 - `prisma/schema.prisma`: database schema.
 - `prisma/migrations`: committed migrations.
-- `prisma/seed.mjs`: initial/test data.
+- `prisma/seed.mjs`: local/test users only; no demo domain data.
 
 ## API Domains
 
@@ -40,6 +40,7 @@ Auth:
 - `POST /auth/refresh`
 - `GET /auth/roles`
 - Uses seeded users for local/test: `owner`, `member`, `readonly`.
+- Fresh databases should start with empty foods, recipes, logs, symptoms, and treatments.
 
 Health:
 
@@ -147,6 +148,8 @@ npm.cmd run db:deploy
 cd C:\Desarrollo\ImoFoods\backend
 npm.cmd run db:seed
 ```
+
+The seed only upserts local/test users. It must not insert demo foods, recipes, logs, symptoms, treatments, or treatment logs unless explicitly requested.
 
 Do not rely on app startup to mutate schema automatically.
 
